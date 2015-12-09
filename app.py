@@ -18,9 +18,10 @@ tasks = [
     }
 ]
 
-@app.route('/rabdata/api/v0.1/tasks', methods=['GET'])
+@app.route('/rabdata/api/v0.1/credentials', methods=['GET'])
 def index():
-	return jsonify({'tasks': tasks})
+	credentials = Credential.all()
+	return jsonify(credentials)
 
 def create():
 	pass
