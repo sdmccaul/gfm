@@ -4,10 +4,39 @@ import rdflib
 from vdm.namespaces import VIVO, TMP, BLOCAL
 from vdm.models import BaseResource, VResource, FacultyMember
 
-from sparqldb import sparql
+from sparqldb import SparqlInterface
 
 import logging
 
+sparql = SparqlInterface()
+
+# class TripleInterface(object):
+#     def __init__(self):
+#         self.rdfClass = None
+#         self.subject = None
+#         self.label = None
+#         self.statements = None
+
+#     def new(self):
+#         pass
+
+#     def all(self, filter_map):
+#         pass
+
+#     def find(self, find_by_map):
+#         pass
+
+#     def update(self, property_map):
+#         pass
+
+#     def save(self):
+#         pass
+
+#     def destroy(self):
+#         pass
+
+#     def create(self):
+#         pass
 
 class Thing(object):
     def __init__(self):
@@ -16,24 +45,20 @@ class Thing(object):
     def new(self, prefix=None):
         generate_uri(self, prefix)
 
-    def all(self,p=None,o=None):
-        format_params = dict(rdfClass=self.rdfClass,rdfFilter='')
-        if (p and o):
-            format_params['rdfFilter'] = "?thing {0} {1} .".format(p,o)            
-        q = u"""
-        CONSTRUCT {{
-            ?thing rdf:type {rdfClass} ;
-                rdfs:label ?label .
-        }}
-        WHERE {{
-            ?thing rdf:type {rdfClass} ;
-                rdfs:label ?label .
-            {rdfFilter}
-        }}
-        LIMIT 20
-        """.format(**format_params)
-        results = sparql.query(q).graph
-        for s,p,o in results.triples( (None, None, None)):
+    def all(self, filters=None):
+        construct = [
+            (None, 'rdf:type', self.rdfClass),
+            (None, 'rdfs:label', None)
+            ]
+        where =     [
+            (None, 'rdf:type', self.rdfClass),
+            (None, 'rdfs:label', None)
+            ]
+        if filters:
+            for p,o in filters.items():
+                where.append((None,p,o))
+        results = sparql.construct(construct,where)
+        for s,p,o in results.graph.triples( (None, None, None)):
             print s,p,o
 
     def find(self, uri=None):
@@ -42,7 +67,8 @@ class Thing(object):
             <{uri}> ?p ?o .
             ?o rdfs:label ?label .
         }}
-        WHERE {{ 
+        WHERE {{
+            <uri> rdf:type {rdfClass} .
             <{uri}> ?p ?o .
             OPTIONAL {{ ?o rdfs:label ?label . }}
         }}
@@ -64,7 +90,9 @@ class Credential(Thing):
         super(Credential, self).all(p,o)
 
     def find(self):
-        pass
+        if not p:
+            p = "bprofile:credentialFor"
+        super(Credential, self).find(p,o)
 
     def update(self):
         pass
