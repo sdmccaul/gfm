@@ -19,7 +19,26 @@ def write_query_triple(s, p, o):
 
 class SparqlInterface(object):
 	def __init__(self):
-		self.construct_template = u"CONSTRUCT {{ {construct_pattern} }} WHERE {{ {where_pattern} }} LIMIT 20"
+		self.construct_template = u"""
+			CONSTRUCT {{ {construct_pattern} }}
+			WHERE {{ 
+				{where_pattern}
+			}}
+			LIMIT 20
+			"""
+		self.describe_template= u"""
+			CONSTRUCT {{ <{uri}> ?p ?o . }}
+			WHERE {{ 
+				<{uri}> ?p ?o .
+			}}
+			"""
+		self.all_template = u"""
+			CONSTRUCT {{ ?subj rdf:type {rdfClass} . }}
+			WHERE {{ 
+				?subj rdf:type {rdfClass} .
+			}}
+			LIMIT 20
+			"""
 
 	def construct(self, construct_triples, where_triples):
 		construct_pattern = ""
@@ -31,4 +50,27 @@ class SparqlInterface(object):
 		rq = self.construct_template.format(
 				construct_pattern=construct_pattern,
 				where_pattern=where_pattern)
-		return vstore.query(rq)
+		try:
+			results = vstore.query(rq)
+		except ResultException:
+			return list()
+		out = [ r for r in results ]
+		return out
+
+	def describe(self, uri):
+		rq = self.describe_template.format(uri=uri)
+		try:
+			results = vstore.query(rq)
+		except ResultException:
+			return list()
+		out = [ r for r in results ]
+		return out
+
+	def all(self, rdfClass):
+		rq = self.all_template.format(rdfClass=rdfClass)
+		try:
+			results = vstore.query(rq)
+		except ResultException:
+			return list()
+		out = [ r for r in results ]
+		return out
