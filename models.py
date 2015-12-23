@@ -12,7 +12,6 @@ import logging
 
 sparql = SparqlInterface()
 
-
 def get_property_object(triples):
     for stmt in triples:
         yield stmt[2]
@@ -129,3 +128,12 @@ class Credential(Thing):
 
     def destroy(self):
         pass
+
+class FisFaculty(object):
+    def __init__(self, store):
+        self._rdfClass="http://vivoweb.org/ontology/core#FacultyMember"
+
+    def all(self):
+        required = ['http://vivo.brown.edu/ontology/vivo-brown/shortId']
+        result = store.all(rdfClass=self._rdfClass, required=required)
+        return result

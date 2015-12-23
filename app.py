@@ -1,36 +1,19 @@
 #!flask/bin/python
 from flask import Flask, jsonify
-from models import Credential
+from models import FisFaculty
+
+from sparqldb import SparqlInterface
 
 app = Flask(__name__)
+store = SparqlInterface()
 
-tasks = [
-    {
-        'id': 1,
-        'title': u'Buy groceries',
-        'description': u'Milk, Cheese, Pizza, Fruit, Tylenol', 
-        'done': False
-    },
-    {
-        'id': 2,
-        'title': u'Learn Python',
-        'description': u'Need to find a good Python tutorial on the web', 
-        'done': False
-    }
-]
 
-@app.route('/rabdata/api/v0.1/credentials', methods=['GET'])
+@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['GET'])
 def index():
-	credentials = Credential.all()
-	return jsonify(credentials)
+	fisFacultyList = FisFaculty.all()
+	return jsonify(fisFacultyList)
 
-@app.route('/rabdata/api/v0.1/credentials/<rabid>', methods=['GET'])
-def show(rabid=None):
-	if rabid is None:
-        raise Exception("No rabid provided")
-	credential = Credential.find(rabid=rabid)
-	return jsonify(credential)
-
+@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['POST'])
 def create(params):
 	credential = Credential.new(params)
 	if credential.save():
@@ -38,16 +21,21 @@ def create(params):
 	else:
 		pass
 
+@app.route('/rabdata/api/v0.1/fisfeed/faculty/<rabid>', methods=['GET'])
+def show(rabid=None):
+	if rabid is None:
+        raise Exception("No rabid provided")
+	credential = Credential.find(rabid=rabid)
+	return jsonify(credential)
+
+
+@app.route('/rabdata/api/v0.1/fisfeed/faculty/<rabid>', methods=['PATCH'])
 def update(params):
 	credential = Credential.find(params['rabid'])
 	if credential.update():
 		redirect(url_for(credential))
 	else:
 		pass
-
-def destroy(params):
-	Credential.find(params['rabid']).destroy()
-	redirect(url_for('credentials'))
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', debug=True)

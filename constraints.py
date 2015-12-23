@@ -19,19 +19,11 @@ class multivalued(object):
 		self._objects.clear()
 
 class unique(object):
-	def __init__(self, resource):
-		self._property = None
-		self._objects = None
-		self._uri = None
-		self._statements = resource._statements
+	def __init__(self, statements):
+		self._stmts = statements
 
 	def __call__(self, f):
-		self._uri = f.predicate
-		self._property = f
-
-	def __repr__(self):
-		return json.dumps(
-			self._statements.get(self._property.__name__))
+		self._sntc = f
 
 	def add(self, val):
 		s, p, o = self._property(obj=val)

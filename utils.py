@@ -14,3 +14,6 @@ def search(triples, pattern):
 def get_triple_objects(triples):
 	for t in triples:
 		yield t[2]
+
+def verify_unique():
+	pass
