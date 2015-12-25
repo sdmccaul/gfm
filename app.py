@@ -3,14 +3,16 @@ from flask import Flask, jsonify
 from models import FisFaculty
 
 from sparqldb import SparqlInterface
+from triplemanager import SessionGraph
 
 app = Flask(__name__)
-store = SparqlInterface()
+db = SparqlInterface()
+access = SessionGraph(db)
 
 
-@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['GET'])
+#@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['GET'])
 def index():
-	fisFacultyList = FisFaculty.all()
+	fisFacultyList = access.all(FisFaculty)
 	return jsonify(fisFacultyList)
 
 @app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['POST'])

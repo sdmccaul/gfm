@@ -2,8 +2,6 @@ import sparqldb
 
 import rdflib
 
-sparql = sparqldb.SparqlInterface()
-
 def pythonize(s,p,o):
   return (s.toPython(),p.toPython(),o.toPython())
 
@@ -13,9 +11,10 @@ def store_query_results(rdflib_results, local_set):
 
 class SessionGraph(object):
     def __init__(self, graphstore):
-      self.keep = initial
-      self.strike = set()
-      self.resources = []
+      self.gs = graphstore
+      self.current = set()
+      self.pending_adds = set()
+      self.pending_removes = set()
 
     def attach(self, resource):
       self.resources.append(resource)
@@ -48,18 +47,21 @@ class SessionGraph(object):
     def describe(self):
       pass
 
-    def all(self, rdfClass, required=None, optional=None):
-      pattern = set(
-          (None, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', rdfClass)
-        )
+    # needs to initizlize individual objects
+    def all(self, model, required=None, optional=None):
+      pattern = [
+            (None,
+            'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
+            model.rdfClass)
+            ]
       if required:
         for r in required:
-          pattern.add((None, r, None))
-      results = self.gs.construct(
-                          c_clause=pattern,
-                          w_clause=pattern)
-      return results
-
+          pattern.append((None, r, None))
+      results = self.gs.construct(pattern,pattern)
+      for r in results:
+        self.current.add(r)
+      return [ model(r[0]) for r in results
+                if r[1] == pattern[1] and r[2] == pattern[2]]
 
     def _update_resources(self):
       for r in self.resources:
@@ -93,8 +95,6 @@ def nest(stmts):
         else:
             result[s[1]] = s[2]
     return result
-
-default = Paragraph()
 
 def unique(object):
   def __init__(self, statements):
