@@ -9,6 +9,9 @@ def store_query_results(rdflib_results, local_set):
   for s,p,o in rdflib_results:
     local_set.add(pythonize(s,p,o))
 
+def tuple_match(tp,pattern):
+  
+
 class SessionGraph(object):
     def __init__(self, graphstore):
       self.gs = graphstore
