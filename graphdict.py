@@ -9,8 +9,6 @@ SingleType = (types.StringType, types.UnicodeType,
 
 ListType = types.ListType
 
-
-
 def filter_subject(tset, pattern):
 	return {t for t in tset if t[0] == pattern[0]}
 
@@ -31,27 +29,24 @@ class GraphDict(MutableMapping):
     """A dictionary interface
        for graph data"""
 
-    def __init__(self, graph, uid, *args, **kwargs):
+    def __init__(self, graph, node, *args, **kwargs):
         self.graph = graph
-        self.uid = uid
-        pattern = (uid, None, None)
-        for p in get_predicates(filter_subject(graph, pattern)):
-        	self.__dict__.setdefault(p)
+        self.node = node
 
     def __getitem__(self, key):
-    	pattern = (self.uid, key, None)
-        return get_objects(
-        		filter_subject_predicates(self.graph, pattern)
-        		)
+        pattern = (self.node, key, None)
+        return list(get_objects(
+            filter_subject_predicates(self.graph, pattern)
+            ))
 
     def __setitem__(self, key, value):
         self.__delitem__(key)
         if not value or isinstance(value, TruthType):
             return
         elif isinstance(value, SingleType):
-            add = { make_triple(self.uid, key, value) }
+            add = { make_triple(self.node, key, value) }
         elif isinstance(value, ListType):
-            add = { make_triple(self.uid, key, v)
+            add = { make_triple(self.node, key, v)
                         for v in value }
         else:
             raise Exception(
@@ -59,21 +54,30 @@ class GraphDict(MutableMapping):
         self.graph.update(add)
 
     def __delitem__(self, key):
-    	pattern = (self.uid, key, None)
+    	pattern = (self.node, key, None)
     	rmv = filter_subject_predicates(self.graph, pattern)
     	self.graph.difference_update(rmv)
 
     def keys(self):
-    	return self.__dict__.keys()
+        pattern = (self.node, None, None)
+    	return list(get_predicates(
+                filter_subject(self.graph, pattern)))
 
     def values(self):
-    	return self.__dict__.values()
+        pattern = (self.node, None, None)
+    	return list(get_objects(
+                filter_subject(self.graph, pattern)))
 
     def items(self):
-    	return self.__dict__.items()
-
+        pattern = (self.node, None, None)
+        return [ (p, self.__getitem__(p))
+                    for p in get_predicates(
+                        filter_subject(self.graph, pattern))
+                ]
     def __iter__(self):
-        return iter(filter_subject(self.graph, self.uid))
+        pattern = (self.node, None, None)
+        return iter(filter_subject(self.graph, pattern))
 
     def __len__(self):
-        return len(filter_subject(self.graph, self.uid))
+        pattern = (self.node, None, None)
+        return len(filter_subject(self.graph, pattern))
