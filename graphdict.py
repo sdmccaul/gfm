@@ -1,4 +1,13 @@
 from collections import MutableMapping
+import types
+
+SingleType = (types.StringType, types.UnicodeType,
+                types.IntType, types.LongType,
+                types.FloatType, types.ComplexType)
+
+ListType = types.ListType
+
+
 
 def filter_subject(tset, pattern):
 	return {t for t in tset if t[0] == pattern[0]}
@@ -35,16 +44,16 @@ class GraphDict(MutableMapping):
 
     def __setitem__(self, key, value):
 		self.__delitem__(key)
-		if not value:
-			return
-		elif isinstance(value, str):
+        if not value:
+            return
+		elif isinstance(value, SingleType):
 			add = { make_triple(self.uid, key, value) }
+		elif isinstance(value, ListType):
+			add = { make_triple(self.uid, key, v)
+					   for v in value }
 		else:
-			try:
-				add = { make_triple(self.uid, key, v)
-							for v in value }
-			except:
-				raise Exception("expected iterable or string")
+			raise Exception(
+                "expected iterable, string or num")
 		self.graph.update(add)
 
     def __delitem__(self, key):
