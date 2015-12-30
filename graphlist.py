@@ -9,9 +9,8 @@ SingleType = (types.StringType, types.UnicodeType,
 
 ListType = types.ListType
 
-def filter_set(tset, pattern):
-	return { t[2] for t in tset
-                if (t[0], t[1]) == (pattern[0], pattern[1]) }
+def filter_predicates(tset, pattern):
+	return { t for t in tset if t[1] == pattern[1] }
 
 def filter_subject_predicates(tset, pattern):
 	return {t for t in tset
@@ -58,8 +57,10 @@ class GraphList(MutableSequence):
         rmv = filter_subject_predicates(self.graph, pattern)
         self.graph.difference_update(rmv)
 
-    def insert(self):
-        pass
-
     def __len__(self):
-        pass
+        pattern = (None, self.edge, None)
+        return len(filter_predicates(self.graph, pattern))
+
+    def insert(self, key, value):
+        atom = (key, self.edge, value)
+        self.graph.add(atom)
