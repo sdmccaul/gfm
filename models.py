@@ -1,16 +1,4 @@
-from rdflib import Graph
-import rdflib
-
-from vdm.namespaces import VIVO, TMP, BLOCAL
-from vdm.models import BaseResource, VResource, FacultyMember
-
-from sparqldb import SparqlInterface
-
-import properties
-
-import logging
-
-sparql = SparqlInterface()
+from graphdict import GraphDict
 
 def get_property_object(triples):
     for stmt in triples:
@@ -129,8 +117,24 @@ class Credential(Thing):
     def destroy(self):
         pass
 
-class FisFaculty(object):
+class FisFaculty(GraphDict):
     rdfClass = "http://vivoweb.org/ontology/core#FacultyMember"
+    predicates = [
+        '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>',
+        '<http://www.w3.org/2000/01/rdf-schema#label>',
+        '<http://xmlns.com/foaf/0.1/firstName>',
+        '<http://xmlns.com/foaf/0.1/lastName>',
+        '<http://vivoweb.org/ontology/core#preferredTitle>',
+        '<http://vivo.brown.edu/ontology/vivo-brown/shortId>',
+    ]
 
-    def __init__(self, uri):
-        self.uri = uri
+    def __init__(self, graph, uri, predicates=predicates):
+        self.graph = graph
+        self.node = uri
+        self.predicates = predicates
+
+    def __getitem__(self, key):
+        if key in self.predicates:
+            super(FisFaculty, self).__getitem__(key)
+        else:
+            raise KeyError

@@ -29,9 +29,10 @@ class GraphDict(MutableMapping):
     """A dictionary interface
        for graph data"""
 
-    def __init__(self, graph, node, *args, **kwargs):
-        self.graph = graph
+    def __init__(self, node, edges, graph=None, **kwargs):
         self.node = node
+        self._init_graph = graph
+        self.graph = graph.copy()
 
     def __getitem__(self, key):
         pattern = (self.node, key, None)
