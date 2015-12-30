@@ -10,8 +10,8 @@ SingleType = (types.StringType, types.UnicodeType,
 ListType = types.ListType
 
 def filter_set(tset, pattern):
-	return [ t[2] for t in tset
-                if (t[0], t[1]) == (pattern[0], pattern[1])]
+	return { t[2] for t in tset
+                if (t[0], t[1]) == (pattern[0], pattern[1]) }
 
 def filter_subject_predicates(tset, pattern):
 	return {t for t in tset
@@ -21,7 +21,7 @@ def get_predicates(tset):
 	return { t[1] for t in tset }
 
 def get_objects(tset):
-	return { t[2] for t in tset }
+	return [ t[2] for t in tset ]
 
 def make_triple(s,p,o):
 	return (s,p,o)
@@ -36,13 +36,27 @@ class GraphList(MutableSequence):
 
     def __getitem__(self, key):
         pattern = (key, self.edge, None)
-        return filter_set(self.graph, pattern)
+        return get_objects(filter_subject_predicates(
+                self.graph, pattern))
 
     def __setitem__(self, key, value):
-        pass
+        self.__delitem__(key)
+        if not value or isinstance(value, TruthType):
+            return
+        elif isinstance(value, SingleType):
+            add = { make_triple(key, self.edge, value) }
+        elif isinstance(value, ListType):
+            add = { make_triple(key, self.edge, v)
+                        for v in value }
+        else:
+            raise Exception(
+                "expected iterable, string or num")
+        self.graph.update(add)
 
     def __delitem__(self, key):
-    	pass
+        pattern = (key, self.edge, None)
+        rmv = filter_subject_predicates(self.graph, pattern)
+        self.graph.difference_update(rmv)
 
     def insert(self):
         pass
