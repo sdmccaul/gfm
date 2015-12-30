@@ -1,6 +1,8 @@
 # http://stackoverflow.com/questions/5029934/python-defaultdict-of-defaultdict
 from collections import defaultdict
 import csv
+
+from graphfilters import Triple
   
 class SetManager(object):
     def __init__(self, initial_set):
@@ -69,6 +71,6 @@ with open('all_triples.csv','r') as f:
   csv_r = csv.reader(f)
   for row in csv_r:
     s,p,o = row
-    init.add((s,p,o))
+    init.add(Triple(s,p,o))
 
 mgmt=SetManager(init)

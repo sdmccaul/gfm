@@ -1,4 +1,5 @@
 from collections import MutableSequence
+from graphfilters import Triple
 import types
 
 TruthType = (types.NoneType, types.BooleanType)
@@ -23,7 +24,10 @@ def get_objects(tset):
 	return [ t[2] for t in tset ]
 
 def make_triple(s,p,o):
-	return (s,p,o)
+	return Triple(s,p,o)
+
+def set_filter(tset, pattern):
+    return {t for t in tset if t == pattern}
 
 class GraphList(MutableSequence):
     """A list interface
@@ -34,9 +38,8 @@ class GraphList(MutableSequence):
         self.graph = graph
 
     def __getitem__(self, key):
-        pattern = (key, self.edge, None)
-        return get_objects(filter_subject_predicates(
-                self.graph, pattern))
+        pattern = Triple(key, self.edge, None)
+        return get_objects(set_filter(self.graph, pattern))
 
     def __setitem__(self, key, value):
         self.__delitem__(key)
@@ -53,14 +56,14 @@ class GraphList(MutableSequence):
         self.graph.update(add)
 
     def __delitem__(self, key):
-        pattern = (key, self.edge, None)
-        rmv = filter_subject_predicates(self.graph, pattern)
+        pattern = Triple(key, self.edge, None)
+        rmv = set_filter(self.graph, pattern)
         self.graph.difference_update(rmv)
 
     def __len__(self):
-        pattern = (None, self.edge, None)
-        return len(filter_predicates(self.graph, pattern))
+        pattern = Triple(None, self.edge, None)
+        return len(set_filter(self.graph, pattern))
 
     def insert(self, key, value):
-        atom = (key, self.edge, value)
+        atom = Triple(key, self.edge, value)
         self.graph.add(atom)
