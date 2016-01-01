@@ -10,21 +10,26 @@ def key_subject(t1):
 def filter_subject(tset, pattern):
 	return {t for t in tset if t[0] == pattern[0]}
 
-def filter_subject_predicates(tset, pattern):
-	return {t for t in tsest
-				if (t[0], t[1]) == (pattern[0], pattern[1])}
-
-def get_objects(tset):
-	return { t[2] for t in tset }
-
 def transform_tuple(t1, pattern):
 	for pos, v in enum(pattern):
 		if v is None:
 			t1[pos]
 
-def fiter_set(tset, pattern=(None,None,None)):
-	matcher = [ val for val in pattern if val ]
-	return { t for t in matcher }
+def filter_predicates(tset, pattern):
+	return { t for t in tset if t[1] == pattern[1] }
+
+def filter_subject_predicates(tset, pattern):
+	return {t for t in tset
+				if (t[0], t[1]) == (pattern[0], pattern[1])}
+
+def get_predicates(tset):
+	return { t[1] for t in tset }
+
+def get_objects(tset):
+	return [ t[2] for t in tset ]
+
+def set_filter(tset, pattern):
+    return {t for t in tset if t == pattern}
 
 class Triple(namedtuple('Triple',['sbj', 'prd', 'obj'])):
 	def __eq__(self, other):

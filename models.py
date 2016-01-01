@@ -1,4 +1,5 @@
 from graphdict import GraphDict
+from collections import defaultdict
 
 def get_property_object(triples):
     for stmt in triples:
@@ -16,6 +17,61 @@ def property_lookup(triples, ppty):
         return out[0]
     else:
         return out
+
+def set_to_dict(sin, din):
+    for s in sin:
+        din[s[1]].append(s[2])
+
+def dict_to_set(din,sin):
+    sin.clear()
+    s = din['@id'][0]
+    for p, v in din.items():
+        if p == '@id':
+            continue
+        for o in v:
+            sin.add((s,p,o))
+
+class GraphEditor(object):
+    def __init__(self, node=None):
+        self._init_graph = None
+        self.graph = None
+        self.node = node
+
+    def load(self, graph):
+        self._init_graph = graph
+        self.graph = self._init_graph.copy()
+        set_to_dict(self._init_graph, self._dict)
+
+    def unload(self):
+        dict_to_set(self._dict, self.graph)
+
+    def __getitem__(self, key):
+        pattern = Triple(self.node, key, None)
+        return get_objects(set_filter(self.graph, pattern))
+
+    def __setitem__(self, key, value):
+        if not value or isinstance(value, TruthType):
+            self.__delitem__(key)
+            return
+        elif isinstance(value, SingleType):
+            self.__delitem__(key)
+            add = { make_triple(self.node, key, value) }
+        elif isinstance(value, ListType):
+            self.__delitem__(key)
+            add = { make_triple(self.node, key, v)
+                        for v in value }
+        else:
+            raise Exception(
+                "expected iterable, string or num")
+        self.graph.update(add)
+
+    def __delitem__(self, key):
+        pattern = Triple(self.node, key, None)
+        rmv = set_filter(self.graph, pattern)
+        self.graph.difference_update(rmv)
+
+    def __len__(self):
+        return len(self.graph)
 
 class Thing(object):
     def __init__(self):
@@ -117,24 +173,22 @@ class Credential(Thing):
     def destroy(self):
         pass
 
-class FisFaculty(GraphDict):
-    rdfClass = "http://vivoweb.org/ontology/core#FacultyMember"
-    predicates = [
-        '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>',
-        '<http://www.w3.org/2000/01/rdf-schema#label>',
-        '<http://xmlns.com/foaf/0.1/firstName>',
-        '<http://xmlns.com/foaf/0.1/lastName>',
-        '<http://vivoweb.org/ontology/core#preferredTitle>',
-        '<http://vivo.brown.edu/ontology/vivo-brown/shortId>',
-    ]
+from graphproperties import MultiValued
+import properties
 
-    def __init__(self, graph, uri, predicates=predicates):
+class FisFaculty(object):
+    rdfType = MultiValued(properties.rdfType)
+    # rdfClass = "http://vivoweb.org/ontology/core#FacultyMember"
+
+    # predicates = [
+    #     '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>',
+    #     '<http://www.w3.org/2000/01/rdf-schema#label>',
+    #     '<http://xmlns.com/foaf/0.1/firstName>',
+    #     '<http://xmlns.com/foaf/0.1/lastName>',
+    #     '<http://vivoweb.org/ontology/core#preferredTitle>',
+    #     '<http://vivo.brown.edu/ontology/vivo-brown/shortId>',
+    # ]
+
+    def __init__(self, graph, uri):
         self.graph = graph
         self.node = uri
-        self.predicates = predicates
-
-    def __getitem__(self, key):
-        if key in self.predicates:
-            super(FisFaculty, self).__getitem__(key)
-        else:
-            raise KeyError

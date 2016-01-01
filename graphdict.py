@@ -9,30 +9,22 @@ SingleType = (types.StringType, types.UnicodeType,
 
 ListType = types.ListType
 
-def filter_subject(tset, pattern):
-	return {t for t in tset if t[0] == pattern[0]}
-
-def filter_subject_predicates(tset, pattern):
-	return {t for t in tset
-				if (t[0], t[1]) == (pattern[0], pattern[1])}
-
-def get_predicates(tset):
-	return { t[1] for t in tset }
-
 def get_objects(tset):
-	return { t[2] for t in tset }
+    return { t[2] for t in tset }
 
 def make_triple(s,p,o):
-	return (s,p,o)
+    return Triple(s,p,o)
+
+def set_filter(tset, pattern):
+    return { t for t in tset if t == pattern }
 
 class GraphDict(MutableMapping):
     """A dictionary interface
        for graph data"""
 
-    def __init__(self, node, edges, graph=None, **kwargs):
+    def __init__(self, node, graph, **kwargs):
         self.node = node
-        self._init_graph = graph
-        self.graph = graph.copy()
+        self.graph = graph
 
     def __getitem__(self, key):
         pattern = (self.node, key, None)

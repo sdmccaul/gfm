@@ -10,18 +10,8 @@ SingleType = (types.StringType, types.UnicodeType,
 
 ListType = types.ListType
 
-def filter_predicates(tset, pattern):
-	return { t for t in tset if t[1] == pattern[1] }
-
-def filter_subject_predicates(tset, pattern):
-	return {t for t in tset
-				if (t[0], t[1]) == (pattern[0], pattern[1])}
-
-def get_predicates(tset):
-	return { t[1] for t in tset }
-
 def get_objects(tset):
-	return [ t[2] for t in tset ]
+    return { t[2] for t in tset }
 
 def make_triple(s,p,o):
 	return Triple(s,p,o)
@@ -42,12 +32,14 @@ class GraphList(MutableSequence):
         return get_objects(set_filter(self.graph, pattern))
 
     def __setitem__(self, key, value):
-        self.__delitem__(key)
         if not value or isinstance(value, TruthType):
+            self.__delitem__(key)
             return
         elif isinstance(value, SingleType):
+            self.__delitem__(key)
             add = { make_triple(key, self.edge, value) }
         elif isinstance(value, ListType):
+            self.__delitem__(key)
             add = { make_triple(key, self.edge, v)
                         for v in value }
         else:
@@ -65,5 +57,5 @@ class GraphList(MutableSequence):
         return len(set_filter(self.graph, pattern))
 
     def insert(self, key, value):
-        atom = Triple(key, self.edge, value)
-        self.graph.add(atom)
+        pattern = Triple(key, self.edge, value)
+        self.graph.add(pattern)
