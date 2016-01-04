@@ -31,47 +31,47 @@ def dict_to_set(din,sin):
         for o in v:
             sin.add((s,p,o))
 
-class GraphEditor(object):
-    def __init__(self, node=None):
-        self._init_graph = None
-        self.graph = None
-        self.node = node
+def alias_namespace(fnc):
+    mod = prop.__module__
+    nme = prop.__name__
+    return mod+":"+name
 
-    def load(self, graph):
-        self._init_graph = graph
-        self.graph = self._init_graph.copy()
-        set_to_dict(self._init_graph, self._dict)
+def get_func_from_attr(attr):
+    pass
 
-    def unload(self):
-        dict_to_set(self._dict, self.graph)
+class Graph(object):
+    def __init__(self):
+        # self._init_graph = graph
+        # self.graph = self._init_graph.copy()
+        self.funk = 'funk'
+        self.dunk = 'dunk'
+        self.advice = lambda x: self.funk
+        self.dupe = self.advice
+        self.edges = {
+            k: v for k,v in self.__dict__.items() 
+        }
+        # self.node = node
+        # for k in cls.__dict__.keys():
+        #     if not startswith(k, '__'):
+        #         _ , edge, _ = k()
+        #         self[edge] = None
 
     def __getitem__(self, key):
-        pattern = Triple(self.node, key, None)
-        return get_objects(set_filter(self.graph, pattern))
+        return self.edges.__getitem__(key)
 
     def __setitem__(self, key, value):
-        if not value or isinstance(value, TruthType):
-            self.__delitem__(key)
-            return
-        elif isinstance(value, SingleType):
-            self.__delitem__(key)
-            add = { make_triple(self.node, key, value) }
-        elif isinstance(value, ListType):
-            self.__delitem__(key)
-            add = { make_triple(self.node, key, v)
-                        for v in value }
-        else:
-            raise Exception(
-                "expected iterable, string or num")
-        self.graph.update(add)
+        self.edges.__setitem__(key,value)
+
 
     def __delitem__(self, key):
-        pattern = Triple(self.node, key, None)
-        rmv = set_filter(self.graph, pattern)
-        self.graph.difference_update(rmv)
+        self.__dict__.__getitem__(key).__del__(self)
 
-    def __len__(self):
-        return len(self.graph)
+    # def update(self, update_dict):
+    #     for k, v in update_dict.items():
+
+
+    # def __len__(self):
+    #     return len(self.graph)
 
 class Thing(object):
     def __init__(self):
@@ -173,22 +173,31 @@ class Credential(Thing):
     def destroy(self):
         pass
 
-from graphproperties import MultiValued
+from graphattributes import MultiValued
 import properties
+
+class GraphMeta(type):
+    def __new__(cls, name, parents, dct):
+        dct.update( {
+            cls.k['predicate']: v for k,v in dct.items()
+                    if isinstance(v, MultiValued)
+            })
+
+        return super(GraphMeta, cls).__new__(cls, name, parents, dct)
 
 class FisFaculty(object):
     rdfType = MultiValued(properties.rdfType)
-    # rdfClass = "http://vivoweb.org/ontology/core#FacultyMember"
-
-    # predicates = [
-    #     '<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>',
-    #     '<http://www.w3.org/2000/01/rdf-schema#label>',
-    #     '<http://xmlns.com/foaf/0.1/firstName>',
-    #     '<http://xmlns.com/foaf/0.1/lastName>',
-    #     '<http://vivoweb.org/ontology/core#preferredTitle>',
-    #     '<http://vivo.brown.edu/ontology/vivo-brown/shortId>',
-    # ]
+    rdfsLabel = MultiValued(properties.rdfsLabel)
+    foafFirstName = MultiValued(properties.foafFirstName)
+    foafLastName = MultiValued(properties.foafLastName)
+    vivoPreferredTitle = MultiValued(properties.vivoPreferredTitle)
+    blocalShortId = MultiValued(properties.blocalShortId)
 
     def __init__(self, graph, uri):
         self.graph = graph
         self.node = uri
+        self.edges = {
+            getattr(self.__class__,k).prd: v
+                for k, v in self.__class__.__dict__.items()
+                    if isinstance(v, MultiValued)
+        }

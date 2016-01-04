@@ -12,11 +12,15 @@ ListType = types.ListType
 class MultiValued(object):
 	def __init__(self, predicate):
 		self.predicate = predicate
-		self.uri = predicate()[1]
 
 	def __get__(self, instance, cls):
-		pattern = self.predicate(sbj=instance.node, obj=None)
-		return get_objects(set_filter(instance.graph, pattern))
+		if instance:
+			pattern = self.predicate(
+				sbj=instance.node, obj=None)
+			return set_filter(instance.graph, pattern)
+		else:
+			return self.predicate(sbj=None, obj=None)
+		
 
 	def __set__(self, instance, value):
 		if not value or isinstance(value, TruthType):
