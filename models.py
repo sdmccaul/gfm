@@ -40,15 +40,15 @@ def get_func_from_attr(attr):
     pass
 
 class Graph(object):
-    def __init__(self):
+    def __init__(self, graph, uri):
         # self._init_graph = graph
         # self.graph = self._init_graph.copy()
-        self.funk = 'funk'
-        self.dunk = 'dunk'
-        self.advice = lambda x: self.funk
-        self.dupe = self.advice
+        self.graph = graph
+        self.node = uri
         self.edges = {
-            k: v for k,v in self.__dict__.items() 
+            getattr(self.__class__,k).prd: k
+                for k, v in self.__class__.__dict__.items()
+                    if isinstance(v, MultiValued)
         }
         # self.node = node
         # for k in cls.__dict__.keys():
@@ -57,15 +57,16 @@ class Graph(object):
         #         self[edge] = None
 
     def __getitem__(self, key):
-        return self.edges.__getitem__(key)
+        attr = self.edges.__getitem__(key)
+        getattr(self,k)
 
     def __setitem__(self, key, value):
-        self.edges.__setitem__(key,value)
-
+        attr = self.edges.__getitem__(key)
+        setattr(self, attr, value)
 
     def __delitem__(self, key):
-        self.__dict__.__getitem__(key).__del__(self)
-
+        attr = self.__dict__.__getitem__(key)
+        delattr(self, attr)
     # def update(self, update_dict):
     #     for k, v in update_dict.items():
 
@@ -185,19 +186,10 @@ class GraphMeta(type):
 
         return super(GraphMeta, cls).__new__(cls, name, parents, dct)
 
-class FisFaculty(object):
+class FisFaculty(Graph):
     rdfType = MultiValued(properties.rdfType)
     rdfsLabel = MultiValued(properties.rdfsLabel)
     foafFirstName = MultiValued(properties.foafFirstName)
     foafLastName = MultiValued(properties.foafLastName)
     vivoPreferredTitle = MultiValued(properties.vivoPreferredTitle)
     blocalShortId = MultiValued(properties.blocalShortId)
-
-    def __init__(self, graph, uri):
-        self.graph = graph
-        self.node = uri
-        self.edges = {
-            getattr(self.__class__,k).prd: v
-                for k, v in self.__class__.__dict__.items()
-                    if isinstance(v, MultiValued)
-        }
