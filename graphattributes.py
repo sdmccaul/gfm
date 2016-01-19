@@ -1,4 +1,4 @@
-from graphfilters import Triple, set_filter, get_objects
+from graphfilters import Datum, set_filter, get_objects
 import types
 
 TruthType = (types.NoneType, types.BooleanType)

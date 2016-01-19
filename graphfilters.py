@@ -1,4 +1,4 @@
-from collections import namedtuple
+from collections import MutableSet, namedtuple
 
 def match_tuple(t1, pattern):
 	if t1 == pattern:
@@ -28,10 +28,70 @@ def get_predicates(tset):
 def get_objects(tset):
 	return [ t[2] for t in tset ]
 
+def get_resources(tset):
+	return [ t.res for t in tset ]
+
+def set_resource(resource, pattern):
+	_, a, v = pattern
+	return Triple(resource, a, v)
+
+def match_resource(graph, pattern):
+	return get_resources(set_filter(graph, pattern))
+
+def match_resource_list(graph, pattern, resources = [None]):
+	matches = []
+	for r in resources:
+		set_pattern = set_resource(r, pattern)
+		matched = match_resource(graph, set_pattern)
+		if matched:
+			matches.extend(matched)
+	return matches
+
+def match_pattern_list(graph, pattern_list, resource=[None]):
+	matches = []
+	for pattern in pattern_list:
+		for r in resource:
+			with_resource = set_resource(r, pattern)
+			matched_resources = match_resource(graph, with_resource)
+
+
 def set_filter(tset, pattern):
     return {t for t in tset if t == pattern}
 
-class Triple(namedtuple('Triple',['sbj', 'prd', 'obj'])):
+class DataSet(MutableSet):
+	def __init__(self, iterable=None):
+		self.data = set()
+		if iterable is not None:
+			self |= iterable
+
+	def __contains__(self, key):
+		if isinstance(key, Datum):
+			for d in self.data:
+				if d == key:
+					return True
+			return False
+		elif isinstance(key, DataSet):
+			for k in key:
+				if k in self:
+					continue
+				return False
+			return True
+		else:
+			raise TypeError("expected data or dataset")
+
+	def __iter__(self):
+		return self.data.__iter__()
+
+	def __len__(self):
+		return len(self.data)
+
+	def add(self, key):
+		self.data.add(key)
+
+	def discard(self, key):
+		self.data.discard(key)		
+
+class Datum(namedtuple('Datum',['res', 'att', 'val'])):
 	def __eq__(self, other):
 		eqs = { (a == b) if (a is not None and b is not None)
 					else True

@@ -40,7 +40,7 @@ def get_func_from_attr(attr):
     pass
 
 class Graph(object):
-    def __init__(self, graph, uri):
+    def __init__(self, uri, graph=set()):
         # self._init_graph = graph
         # self.graph = self._init_graph.copy()
         self.graph = graph
