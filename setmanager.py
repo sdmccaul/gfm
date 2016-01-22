@@ -2,7 +2,7 @@
 from collections import defaultdict
 import csv
 
-from graphfilters import Triple
+from graphfilters import Datum, DataSet
   
 class SetManager(object):
     def __init__(self, initial_set):
@@ -71,6 +71,6 @@ with open('all_triples.csv','r') as f:
   csv_r = csv.reader(f)
   for row in csv_r:
     s,p,o = row
-    init.add(Triple(s,p,o))
+    init.add(Datum(s,p,o))
 
-mgmt=SetManager(init)
+mgmt=DataSet(init)

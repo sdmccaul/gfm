@@ -44,3 +44,9 @@ class MultiValued(object):
 		pattern = self.predicate(sbj=instance.node, obj=None)
 		rmv = set_filter(instance.graph, pattern)
 		instance.graph.difference_update(rmv)
+
+	# def add(self, instance, value):
+	# 	instance.graph.add(self.predicate(sbj=instance.node, obj=value))
+
+	# def remove(self, instance, value):
+	# 	instance.graph.discard(self.predicate(sbj=instance.node, obj=value))

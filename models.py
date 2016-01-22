@@ -46,7 +46,7 @@ class Graph(object):
         self.graph = graph
         self.node = uri
         self.edges = {
-            getattr(self.__class__,k).prd: k
+            getattr(self.__class__,k).att: k
                 for k, v in self.__class__.__dict__.items()
                     if isinstance(v, MultiValued)
         }

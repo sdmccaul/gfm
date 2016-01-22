@@ -1,4 +1,5 @@
 from collections import MutableSet, namedtuple
+from itertools import ifilter
 
 def match_tuple(t1, pattern):
 	if t1 == pattern:
@@ -29,11 +30,17 @@ def get_objects(tset):
 	return [ t[2] for t in tset ]
 
 def get_resources(tset):
-	return [ t.res for t in tset ]
+	return { t.res for t in tset }
 
-def set_resource(resource, pattern):
+def map_resource(resource, pattern):
 	_, a, v = pattern
-	return Triple(resource, a, v)
+	return Datum(resource, a, v)
+
+def set_resources(pattern, resource_list):
+	return [ map_resource(r, pattern) for r in resource_list ]
+
+def match_data(graph, pattern_list):
+	return [ set_filter(graph, p) for p in pattern_list ]
 
 def match_resource(graph, pattern):
 	return get_resources(set_filter(graph, pattern))
@@ -47,16 +54,22 @@ def match_resource_list(graph, pattern, resources = [None]):
 			matches.extend(matched)
 	return matches
 
-def match_pattern_list(graph, pattern_list, resource=[None]):
-	matches = []
-	for pattern in pattern_list:
-		for r in resource:
-			with_resource = set_resource(r, pattern)
-			matched_resources = match_resource(graph, with_resource)
+def match_multiple_patterns(graph, pattern_list):
+	out = [ set_filter(graph, p) for p in pattern_list ]
+	return out
 
+def match_all_resources(graph, pattern, resource_list):
+	mapped_data = [ map_resource(r, pattern) for r in resource_list]
+	return match_multiple_patterns(graph, mapped_data)
 
 def set_filter(tset, pattern):
-    return {t for t in tset if t == pattern}
+	return {t for t in tset if t == pattern}
+
+def match_resources(graph, dataset):
+	resource_list = get_resources(pattern_list)
+	for pattern in pattern_list:
+		mapped_data = [ map_resource(r, pattern) for r in resource_list ]
+
 
 class DataSet(MutableSet):
 	def __init__(self, iterable=None):
@@ -89,7 +102,24 @@ class DataSet(MutableSet):
 		self.data.add(key)
 
 	def discard(self, key):
-		self.data.discard(key)		
+		self.data.discard(key)
+
+	def find(self, pattern):
+		out = DataSet()
+		if isinstance(pattern, Datum):
+			for d in self:
+				if d == pattern:
+					out.add(d)
+		elif isinstance(pattern, DataSet):
+			for p in pattern:
+				for d in self:
+					if d == p:
+						out.add(d)
+			if pattern not in out:
+				return DataSet()
+		else:
+			raise TypeError("expected data or dataset")
+		return out
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):
 	def __eq__(self, other):
