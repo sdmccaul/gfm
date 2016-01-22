@@ -105,21 +105,17 @@ class DataSet(MutableSet):
 		self.data.discard(key)
 
 	def find(self, pattern):
-		out = DataSet()
 		if isinstance(pattern, Datum):
-			for d in self:
-				if d == pattern:
-					out.add(d)
+			if pattern in self:
+				ds = DataSet() #DataSet().add(pattern) returns NoneType
+				ds.add(pattern)
+				return ds & self
 		elif isinstance(pattern, DataSet):
-			for p in pattern:
-				for d in self:
-					if d == p:
-						out.add(d)
-			if pattern not in out:
-				return DataSet()
+			if pattern <= self:
+				return pattern & self
 		else:
 			raise TypeError("expected data or dataset")
-		return out
+		return DataSet()
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):
 	def __eq__(self, other):
