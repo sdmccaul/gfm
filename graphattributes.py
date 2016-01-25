@@ -1,4 +1,4 @@
-from graphfilters import Datum, set_filter, get_objects
+from datasets import Dataset, Datum
 import types
 
 TruthType = (types.NoneType, types.BooleanType)
@@ -9,6 +9,9 @@ SingleType = (types.StringType, types.UnicodeType,
 
 ListType = types.ListType
 
+def get_objects(tset):
+	return [ d[2] for d in dset ]
+
 class MultiValued(object):
 	def __init__(self, predicate):
 		self.predicate = predicate
@@ -17,7 +20,7 @@ class MultiValued(object):
 		if instance:
 			pattern = self.predicate(
 				sbj=instance.node, obj=None)
-			return set_filter(instance.graph, pattern)
+			return get_objects(instance.graph.find(pattern))
 		else:
 			return self.predicate(sbj=None, obj=None)
 		

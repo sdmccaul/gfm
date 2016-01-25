@@ -105,14 +105,14 @@ class DataSet(MutableSet):
 		self.data.discard(key)
 
 	def find(self, pattern):
-		if isinstance(pattern, Datum):
-			if pattern in self:
-				ds = DataSet() #DataSet().add(pattern) returns NoneType
-				ds.add(pattern)
-				return ds & self
-		elif isinstance(pattern, DataSet):
+		if isinstance(pattern, DataSet):
 			if pattern <= self:
 				return pattern & self
+		elif isinstance(pattern, Datum):
+			if pattern in self:
+				ds = DataSet() #DataSet().add(pattern) returns NoneType?
+				ds.add(pattern)
+				return ds & self #call to self.find(ds) not working
 		else:
 			raise TypeError("expected data or dataset")
 		return DataSet()
