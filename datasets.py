@@ -46,10 +46,19 @@ class DataSet(MutableSet):
 			raise TypeError("expected data or dataset")
 		return DataSet()
 
-	def difference(self, pattern):
-		if pattern in self:
-			remove = pattern & self
-			return self - remove
+	def difference_update(self, pattern):
+		if isinstance(pattern, DataSet):
+			if pattern <= self: #Warning!! ORDER MATTERS
+				rmv = pattern & self
+				for r in rmv:
+					self.discard(r)
+		elif isinstance(pattern, Datum):
+			if pattern in self:
+				ds = DataSet() #DataSet().add(pattern) returns NoneType?
+				ds.add(pattern)
+				self.difference_update(ds)
+		else:
+			raise TypeError("expected data or dataset")
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):
 	def __eq__(self, other):

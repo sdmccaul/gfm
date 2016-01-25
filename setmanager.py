@@ -2,7 +2,7 @@
 from collections import defaultdict
 import csv
 
-from graphfilters import Datum, DataSet
+from datasets import Datum, DataSet
   
 class SetManager(object):
     def __init__(self, initial_set):
