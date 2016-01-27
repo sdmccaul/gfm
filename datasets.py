@@ -1,4 +1,4 @@
-from collections import Set, MutableSet, Iterable, namedtuple
+from collections import MutableSet, Iterable, namedtuple
 
 class DataSet(MutableSet):
 
@@ -73,12 +73,12 @@ class DataSet(MutableSet):
 		# Ordering matters due to abc __and__ implementation
 		# pattern & self != self & pattern
 		# Query datum must be in first position
-		if isinstance(pattern, DataSet):
-			if pattern <= self:
+		if isinstance(pattern, Iterable):
+			if pattern in self:
 				return pattern & self
+			return DataSet()
 		else:
-			raise TypeError("expected data or dataset")
-		return DataSet()
+			raise TypeError("expected dataset or iterable")
 		
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):

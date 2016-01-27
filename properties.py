@@ -1,19 +1,19 @@
-from graphfilters import Datum
+from datasets import Datum
 
-def rdfType(sbj=None, obj=None):
-	return Datum(sbj,'<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>', obj)
+def rdfType(res=None, val=None):
+	return Datum(res,'<http://www.w3.org/1999/02/22-rdf-syntax-ns#type>', val)
 
-def rdfsLabel(sbj=None, obj=None):
-	return Datum(sbj,'<http://www.w3.org/2000/01/rdf-schema#label>', obj)
+def rdfsLabel(res=None, val=None):
+	return Datum(res,'<http://www.w3.org/2000/01/rdf-schema#label>', val)
 
-def foafFirstName(sbj=None, obj=None):
-	return Datum(sbj,'<http://xmlns.com/foaf/0.1/firstName>', obj)
+def foafFirstName(res=None, val=None):
+	return Datum(res,'<http://xmlns.com/foaf/0.1/firstName>', val)
 
-def foafLastName(sbj=None, obj=None):
-	return Datum(sbj,'<http://xmlns.com/foaf/0.1/lastName>', obj)
+def foafLastName(res=None, val=None):
+	return Datum(res,'<http://xmlns.com/foaf/0.1/lastName>', val)
 
-def vivoPreferredTitle(sbj=None, obj=None):
-	return Datum(sbj,'<http://vivoweb.org/ontology/core#preferredTitle>', obj)
+def vivoPreferredTitle(res=None, val=None):
+	return Datum(res,'<http://vivoweb.org/ontology/core#preferredTitle>', val)
 
-def blocalShortId(sbj=None, obj=None):
-	return Datum(sbj,'<http://vivo.brown.edu/ontology/vivo-brown/shortId>', obj)
+def blocalShortId(res=None, val=None):
+	return Datum(res,'<http://vivo.brown.edu/ontology/vivo-brown/shortId>', val)

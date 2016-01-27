@@ -58,14 +58,14 @@ class Graph(object):
 
     def __getitem__(self, key):
         attr = self.edges.__getitem__(key)
-        getattr(self,k)
+        return getattr(self,attr)
 
     def __setitem__(self, key, value):
         attr = self.edges.__getitem__(key)
         setattr(self, attr, value)
 
     def __delitem__(self, key):
-        attr = self.__dict__.__getitem__(key)
+        attr = self.edges.__getitem__(key)
         delattr(self, attr)
     # def update(self, update_dict):
     #     for k, v in update_dict.items():

@@ -1,4 +1,4 @@
-from datasets import Dataset, Datum
+from datasets import DataSet, Datum
 import types
 
 TruthType = (types.NoneType, types.BooleanType)
@@ -9,47 +9,47 @@ SingleType = (types.StringType, types.UnicodeType,
 
 ListType = types.ListType
 
-def get_objects(tset):
+def get_values(dset):
 	return [ d[2] for d in dset ]
 
 class MultiValued(object):
-	def __init__(self, predicate):
-		self.predicate = predicate
+	def __init__(self, attr):
+		self.attr = attr
 
 	def __get__(self, instance, cls):
 		if instance:
-			pattern = self.predicate(
-				sbj=instance.node, obj=None)
-			return get_objects(instance.graph.find(pattern))
+			pattern = self.attr(
+				res=instance.node, val=None)
+			return get_values(instance.graph.find(
+								DataSet({pattern})))
 		else:
-			return self.predicate(sbj=None, obj=None)
+			return self.attr(res=None, val=None)
 		
 
 	def __set__(self, instance, value):
 		if not value or isinstance(value, TruthType):
 			self.__delete__(instance)
 			return
-		elif isinstance(value, SingleType):
-			self.__delete__(instance)
-			add = { self.predicate(
-            			sbj=instance.node, obj=value) }
+		# elif isinstance(value, SingleType):
+		# 	self.__delete__(instance)
+		# 	add = { self.attr(
+  #           			res=instance.node, val=value) }
 		elif isinstance(value, ListType):
 			self.__delete__(instance)
-			add = { self.predicate(
-						sbj=instance.node, obj=v)
+			add = { self.attr(
+						res=instance.node, val=v)
 							for v in value }
+			instance.graph |= add
 		else:
-			raise Exception(
-					"expected iterable, string or num")
-		instance.graph.update(add)
+			raise Exception("expected list value")
+		# instance.graph.update(add)
 
 	def __delete__(self, instance):
-		pattern = self.predicate(sbj=instance.node, obj=None)
-		rmv = instance.graph.find(pattern)
-		instance.graph.difference_update(rmv)
+		rmv = self.attr(res=instance.node, val=None)
+		instance.graph -= {rmv}
 
 	# def add(self, instance, value):
-	# 	instance.graph.add(self.predicate(sbj=instance.node, obj=value))
+	# 	instance.graph.add(self.attr(res=instance.node, val=value))
 
 	# def remove(self, instance, value):
-	# 	instance.graph.discard(self.predicate(sbj=instance.node, obj=value))
+	# 	instance.graph.discard(self.attr(res=instance.node, val=value))
