@@ -1,5 +1,5 @@
-from graphdict import GraphDict
-from collections import defaultdict
+from graphattributes import Attribute
+import properties
 
 def get_property_object(triples):
     for stmt in triples:
@@ -39,16 +39,17 @@ def alias_namespace(fnc):
 def get_func_from_attr(attr):
     pass
 
-class Graph(object):
+class Resource(object):
     def __init__(self, uri, graph=set()):
         # self._init_graph = graph
         # self.graph = self._init_graph.copy()
         self.graph = graph
-        self.node = uri
+        self.uri = uri
+        self.node = self.uri
         self.edges = {
             getattr(self.__class__,k).att: k
                 for k, v in self.__class__.__dict__.items()
-                    if isinstance(v, MultiValued)
+                    if isinstance(v, Attribute)
         }
         # self.node = node
         # for k in cls.__dict__.keys():
@@ -174,22 +175,10 @@ class Credential(Thing):
     def destroy(self):
         pass
 
-from graphattributes import MultiValued
-import properties
-
-class GraphMeta(type):
-    def __new__(cls, name, parents, dct):
-        dct.update( {
-            cls.k['predicate']: v for k,v in dct.items()
-                    if isinstance(v, MultiValued)
-            })
-
-        return super(GraphMeta, cls).__new__(cls, name, parents, dct)
-
-class FisFaculty(Graph):
-    rdfType = MultiValued(properties.rdfType)
-    rdfsLabel = MultiValued(properties.rdfsLabel)
-    foafFirstName = MultiValued(properties.foafFirstName)
-    foafLastName = MultiValued(properties.foafLastName)
-    vivoPreferredTitle = MultiValued(properties.vivoPreferredTitle)
-    blocalShortId = MultiValued(properties.blocalShortId)
+class FisFaculty(Resource):
+    rdfType = Attribute(properties.rdfType)
+    rdfsLabel = Attribute(properties.rdfsLabel)
+    foafFirstName = Attribute(properties.foafFirstName)
+    foafLastName = Attribute(properties.foafLastName)
+    vivoPreferredTitle = Attribute(properties.vivoPreferredTitle)
+    blocalShortId = Attribute(properties.blocalShortId)

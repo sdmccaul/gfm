@@ -50,35 +50,24 @@ class DataSet(MutableSet):
 
 	# END REQUIRED MutableSet DEFINITIONS
 
-	# BEGIN SPECIAL METHOD OVERRIDES
-	def __sub__(self, other):
-		if not isinstance(other, Iterable):
-			return NotImplemented
-		other = self._from_iterable(other)
-		return self._from_iterable(value for value in self
-									if value not in other)
-
-	def __isub__(self,other):
-		# Base abc __isub__ implementation uses self.discard
-		# This simply reuses the __sub__ implementation,
-		# which does type coersion (converts all iterables to DataSet)
-		# 
-		# Note that the return statement is necessary
-		self = self - other
-		return self
-
-	# END SPECIAL METHOD OVERRIDES
-
 	def find(self, pattern):
 		# Ordering matters due to abc __and__ implementation
 		# pattern & self != self & pattern
 		# Query datum must be in first position
-		if isinstance(pattern, Iterable):
-			if pattern in self:
+		if pattern in self:
+			if isinstance(pattern, DataSet):
 				return pattern & self
-			return DataSet()
+			elif isinstance(pattern, Datum):
+				return DataSet({pattern}) & self
 		else:
-			raise TypeError("expected dataset or iterable")
+			return DataSet()
+
+	def find_and_remove(self, pattern):
+		rmv = self.find(pattern)
+		self -= rmv
+
+	def update(self, other):
+		self |= other
 		
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):
