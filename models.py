@@ -16,23 +16,19 @@ class Resource(object):
         }
 
     def __getitem__(self, key):
-        edge = self.edges.__getitem__(key)
-        return self.graph.find(edge)
+        return getattr(self, self.edges.__getitem__(key))
 
     def __setitem__(self, key, value):
-        edge = self.edges.__getitem__(key)
-        self.graph.update(self, edge, value)
+        setattr(self, self.edges.__getitem__(key), value)
 
     def __delitem__(self, key):
-        edge = self.edges.__getitem__(key)
-        self.graph.find_and_remove(edge)
+        delattr(self, self.edges.__getitem__(key))
 
     def update(self):
         pass
 
     def destroy(self):
         pass
-
 
     @classmethod
     def pattern(cls, res=None):

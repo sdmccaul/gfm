@@ -70,6 +70,8 @@ class SetManager(object):
 def clean_brackets(d):
   if d.startswith('<http'):
     return d[1:-1]
+  else:
+    return d
 
 init = set()
 with open('all_triples.csv','r') as f:
