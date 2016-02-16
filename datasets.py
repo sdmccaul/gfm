@@ -50,7 +50,7 @@ class DataSet(MutableSet):
 
 	# END REQUIRED MutableSet DEFINITIONS
 
-	def find(self, pattern):
+	def query(self, pattern):
 		# Ordering matters due to abc __and__ implementation
 		# pattern & self != self & pattern
 		# Query datum must be in first position
@@ -62,12 +62,15 @@ class DataSet(MutableSet):
 		else:
 			return DataSet()
 
-	def find_and_remove(self, pattern):
-		rmv = self.find(pattern)
+	def query_and_remove(self, pattern):
+		rmv = self.query(pattern)
 		self -= rmv
 
 	def update(self, other):
 		self |= other
+
+	def find(self, pattern):
+		pass
 		
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):
@@ -88,3 +91,18 @@ class Datum(namedtuple('Datum',['res', 'att', 'val'])):
 			return True
 		else:
 			return False
+
+class Required(Datum):
+	pass
+
+class Linked(Datum):
+	pass
+
+class Optional(Datum):
+	pass
+
+class Exclude(Datum):
+	pass
+
+class Only(Datum):
+	pass

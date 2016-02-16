@@ -12,14 +12,14 @@ access = SessionGraph(db)
 
 #@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['GET'])
 def index():
-	fisFacultyList = access.all(FisFaculty)
-	return jsonify(fisFacultyList)
+	allFisFac = FisFaculty.all()
+	return jsonify(allFisFac)
 
 @app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['POST'])
 def create(params):
-	credential = Credential.new(params)
-	if credential.save():
-		redirect(url_for('credentials'))
+	fisFac = FisFaculty.new(params)
+	if fisFac.save():
+		redirect(url_for('faculty'))
 	else:
 		pass
 
@@ -27,15 +27,15 @@ def create(params):
 def show(rabid=None):
 	if rabid is None:
         raise Exception("No rabid provided")
-	credential = Credential.find(rabid=rabid)
-	return jsonify(credential)
+	fisFac = FisFaculty.find(rabid=rabid)
+	return jsonify(fisfac)
 
 
-@app.route('/rabdata/api/v0.1/fisfeed/faculty/<rabid>', methods=['PATCH'])
+@app.route('/rabdata/api/v0.1/fisfeed/faculty/<rabid>', methods=['PUT'])
 def update(params):
-	credential = Credential.find(params['rabid'])
-	if credential.update():
-		redirect(url_for(credential))
+	fisFac = FisFaculty.find(rabid=rabid)
+	if fisFac.update(params=params):
+		redirect(url_for(rabid))
 	else:
 		pass
 

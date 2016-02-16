@@ -1,79 +1,99 @@
-from graphattributes import Attribute
+from collections import defaultdict
+from graphattributes import Edge
+from datasets import DataSet, Datum, Required, Linked, Optional
 import properties
 
-def get_property_object(triples):
-    for stmt in triples:
-        yield stmt[2]
-
-def match_property(triples, ppty):
-    for stmt in triples:
-        if stmt[1] == ppty:
-            yield stmt
-
-def property_lookup(triples, ppty):
-    out = [ obj for obj in get_property_object(
-                match_property(triples, ppty)) ]
-    if len(out) == 1:
-        return out[0]
-    else:
-        return out
-
-def set_to_dict(sin, din):
-    for s in sin:
-        din[s[1]].append(s[2])
-
-def dict_to_set(din,sin):
-    sin.clear()
-    s = din['@id'][0]
-    for p, v in din.items():
-        if p == '@id':
-            continue
-        for o in v:
-            sin.add((s,p,o))
-
-def alias_namespace(fnc):
-    mod = prop.__module__
-    nme = prop.__name__
-    return mod+":"+name
-
-def get_func_from_attr(attr):
-    pass
 
 class Resource(object):
     def __init__(self, uri, graph=set()):
-        # self._init_graph = graph
-        # self.graph = self._init_graph.copy()
         self.graph = graph
         self.uri = uri
         self.node = self.uri
         self.edges = {
             getattr(self.__class__,k).att: k
                 for k, v in self.__class__.__dict__.items()
-                    if isinstance(v, Attribute)
+                    if isinstance(v, Edge)
         }
-        # self.node = node
-        # for k in cls.__dict__.keys():
-        #     if not startswith(k, '__'):
-        #         _ , edge, _ = k()
-        #         self[edge] = None
 
     def __getitem__(self, key):
-        attr = self.edges.__getitem__(key)
-        return getattr(self,attr)
+        edge = self.edges.__getitem__(key)
+        return self.graph.find(edge)
 
     def __setitem__(self, key, value):
-        attr = self.edges.__getitem__(key)
-        setattr(self, attr, value)
+        edge = self.edges.__getitem__(key)
+        self.graph.update(self, edge, value)
 
     def __delitem__(self, key):
-        attr = self.edges.__getitem__(key)
-        delattr(self, attr)
-    # def update(self, update_dict):
-    #     for k, v in update_dict.items():
+        edge = self.edges.__getitem__(key)
+        self.graph.find_and_remove(edge)
 
+    def update(self):
+        pass
+
+    def destroy(self):
+        pass
+
+
+    @classmethod
+    def pattern(cls, res=None):
+        qset = DataSet([])
+        for k in cls.__dict__.keys():
+            att = getattr(cls,k)
+            if isinstance(att, Required):
+                qset.add(att._replace(res=res))
+            elif isinstance(att, Optional):
+                qset.add(att._replace(res=res))
+            elif isinstance(att, Linked):
+                qset.add(att._replace(val=res))
+            else:
+                continue
+        return qset
+
+    @classmethod
+    def find(dset, cls, uri):
+        res = dset.find(cls.pattern(uri))
+        if res:
+            rsc = cls(res, dset)
+            dset.register(rsc)
+            return rsc
+        else:
+            raise "Resource not found"
+
+    @classmethod
+    def all(cls, session):
+        res = session.query(cls.pattern())
+        if res:
+            rscs = [ cls(r) for r in res ]
+            for rsc in rscs:
+                session.register(rsc)
+            return rscs
+        else:
+            raise "Resources not found"
+
+    @classmethod
+    def new(cls, session, **params):
+        uri = session.mint_new_uri(cls.prefix)
+        rsc = cls(uri)
+        session.register(rsc)
+        rsc.update(**params)
+        return rsc
+
+    @classmethod
+    def destroy(session, cls, uri):
+        rsc = cls.find(uri)
+        for k in rsc:
+            del k
+        graph.register(rsc)
+        return rsc
+
+    def to_dict(self):
+        out = {"@id": self.uri}
+        for e in self.edges:
+            out[e] = self[e]
+        return out
 
     # def __len__(self):
-    #     return len(self.graph)
+    #     return len(self.graph)   
 
 class Thing(object):
     def __init__(self):
@@ -176,9 +196,13 @@ class Credential(Thing):
         pass
 
 class FisFaculty(Resource):
-    rdfType = Attribute(properties.rdfType)
-    rdfsLabel = Attribute(properties.rdfsLabel)
-    foafFirstName = Attribute(properties.foafFirstName)
-    foafLastName = Attribute(properties.foafLastName)
-    vivoPreferredTitle = Attribute(properties.vivoPreferredTitle)
-    blocalShortId = Attribute(properties.blocalShortId)
+    rdfType = Edge(properties.rdfType,Required,
+        values=[
+            'http://vivoweb.org/ontology/core#FacultyMember',
+            'http://vivo.brown.edu/ontology/vivo-brown/BrownThing'
+            ])
+    shortId = Edge(properties.blocalShortId, Required) 
+    label = Edge(properties.rdfsLabel, Optional)
+    first = Edge(properties.foafFirstName, Optional)
+    last = Edge(properties.foafLastName, Optional)
+    title = Edge(properties.vivoPreferredTitle, Optional)

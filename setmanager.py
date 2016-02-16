@@ -66,11 +66,16 @@ class SetManager(object):
     def describe(self):
       pass
 
+
+def clean_brackets(d):
+  if d.startswith('<http'):
+    return d[1:-1]
+
 init = set()
 with open('all_triples.csv','r') as f:
   csv_r = csv.reader(f)
   for row in csv_r:
-    s,p,o = row
+    s,p,o = map(clean_brackets,row)
     init.add(Datum(s,p,o))
 
 mgmt=DataSet(init)
