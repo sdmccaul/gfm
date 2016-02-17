@@ -47,21 +47,21 @@ class Resource(object):
 
     @classmethod
     def find(dset, cls, uri):
-        res = dset.find(cls.pattern(uri))
+        res = session.find(cls.pattern(uri))
         if res:
-            rsc = cls(res, dset)
-            dset.register(rsc)
+            rsc = cls(res, session)
+            # dset.register(rsc)
             return rsc
         else:
             raise "Resource not found"
 
     @classmethod
-    def all(cls, session):
-        res = session.query(cls.pattern())
+    def find_all(cls, session):
+        res = session.find_all(cls.pattern())
         if res:
-            rscs = [ cls(r) for r in res ]
-            for rsc in rscs:
-                session.register(rsc)
+            rscs = [ cls(r, session) for r in res ]
+            # for rsc in rscs:
+            #     session.register(rsc)
             return rscs
         else:
             raise "Resources not found"

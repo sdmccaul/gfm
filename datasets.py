@@ -69,8 +69,12 @@ class DataSet(MutableSet):
 	def update(self, other):
 		self |= other
 
-	def find(self, pattern):
-		pass
+	def copy(self):
+		data = [ d for d in self.data ]
+		return DataSet(data)
+
+	# def find(self, pattern):
+	# 	pass
 		
 
 class Datum(namedtuple('Datum',['res', 'att', 'val'])):

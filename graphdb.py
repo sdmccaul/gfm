@@ -1,13 +1,13 @@
 import requests
 import contextlib
 
-from datasets import Datum, DataSet
+from datasets import Datum, DataSet, Required, Optional, Linked
 
 
 def variableGenerator(r):
 	vals = range(r)
 	for v in vals:
-		yield v
+		yield "?"+str(v)
 
 def qualify(inStr):
 	if inStr is None or inStr.startswith("?"):
@@ -21,17 +21,17 @@ def sparvar(inStr):
 def qualify_rule(s,p,o):
 	return qualify(s), qualify(p), qualify(o)
 
-def make_subject_variable(var,s,p,o):
-	if s is None:
-		return sparvar(var),p,o
+def make_subject_variable(q,var):
+	if q.res is None:
+		return q._replace(res=var)
 	else:
-		return s,p,o
+		return q
 
-def make_object_variable(var,s,p,o):
-	if o is None:
-		return s,p,sparvar(var)
+def make_object_variable(q,var):
+	if q.val is None:
+		return q._replace(val=var)
 	else:
-		return s,p,o
+		return q
 
 def write_rule(s,p,o):
 	return "{0}{1}{2}.".format(s,p,o)
@@ -47,9 +47,28 @@ def sparqlify(qset):
 	else:
 		raise "Unrecognized query"
 
+def variablize(qset):
+	out = DataSet([])
+	varJar = variableGenerator(100)
+	for q in qset:
+		var  = varJar.next()
+		if (isinstance(q,Required) or isinstance(q,Optional)):
+			out.add(make_object_variable(q, var))
+		elif isinstance(q,Linked):
+			out.add(make_subject_variable(q, var))
+		else:
+			continue
+	return out
+
+def write_statement(rule):
+	return write_rule(*(qualify_rule(*(rule))))
+
+def write_optional(rule):
+	return optionalize_rule(write_statement(rule))
+
 class QueryInterface(object):
 	def __init__(self):
-		self.construct_template = u"CONSTRUCT{{{construct_pattern}}}WHERE{{{where_pattern}}}"
+		self.construct_template = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
 		self.describe_template= u"""
 			CONSTRUCT {{ <{uri}> ?p ?o . }}
 			WHERE {{ 
@@ -70,28 +89,25 @@ class QueryInterface(object):
 			}}
 			"""
 
-	def find(self, required, filters=None, optional=None):
-		construct_pattern = ""
-		where_pattern = ""
-		if filters:
-			for e, f in enumerate(filters):
-				where_pattern += write_rule(
-					*(qualify_rule(*(make_subject_variable(str(e), *f))))
-					)
-		for e, r in enumerate(required):
-			pattern = write_rule(
-				*(qualify_rule(*(make_object_variable(str(e), *r))))
-				)
-			construct_pattern += pattern
-			where_pattern += pattern
-		if optional:
-			for e, o in enumerate(optional):
-				pattern = write_rule(
-					*(qualify_rule(*(make_object_variable(str(e), *o))))
-				)
-				construct_pattern += pattern
-				where_pattern += optionalize_rule(pattern)
-		return construct_pattern, where_pattern
+	def find(self, pattern):
+		rqrd_cnst = ""
+		rqrd_where = ""
+		optl_cnst = ""
+		optl_where = ""
+		pattern = variablize(pattern)
+		for p in pattern:
+			if isinstance(p,Required):
+				stmt = write_statement(p)
+				rqrd_cnst += stmt
+				rqrd_where += stmt
+			elif isinstance(p, Optional):
+				stmt = write_statement(p)
+				optl_cnst += stmt
+				optl = write_optional(p)
+				optl_where += optl
+		construct_pattern = rqrd_cnst + optl_cnst
+		where_pattern = rqrd_where + optl_where
+		qbody = self.construct_template.format(construct_pattern, where_pattern)
 
 	def all(self, required, filters=None, optional=None):
 		construct_pattern = ""
@@ -138,10 +154,9 @@ class QueryInterface(object):
 					for s,p,o in results ]
 		return out
 
-	def query(qset):
+	def query(qbody):
 		endpoint = "http://localhost:8082/VIVO/query"
 		payload = {'output': 'json'}
-		qbody = sparqlify(qset)
 		payload['query'] = qbody
 		with contextlib.closing(requests.get(endpoint, params=payload)) as resp:
 			if resp.status_code == 200:
