@@ -5,10 +5,9 @@ import properties
 
 
 class Resource(object):
-    def __init__(self, uri, graph=set()):
-        self.graph = graph
+    def __init__(self, uri, sessionGraph=set()):
+        self.sessionGraph = sessionGraph
         self.uri = uri
-        self.node = self.uri
         self.edges = {
             getattr(self.__class__,k).att: k
                 for k, v in self.__class__.__dict__.items()
@@ -30,6 +29,12 @@ class Resource(object):
     def destroy(self):
         pass
 
+    def setSession(self, graph):
+        self.sessionGraph = graph
+
+    def unsetGraph(self):
+        self.sessionGraph = None
+
     @classmethod
     def pattern(cls, res=None):
         qset = DataSet([])
@@ -46,11 +51,11 @@ class Resource(object):
         return qset
 
     @classmethod
-    def find(dset, cls, uri):
+    def find(cls, uri, session):
         res = session.find(cls.pattern(uri))
         if res:
             rsc = cls(res, session)
-            # dset.register(rsc)
+            session.register(rsc)
             return rsc
         else:
             raise "Resource not found"
@@ -59,9 +64,9 @@ class Resource(object):
     def find_all(cls, session):
         res = session.find_all(cls.pattern())
         if res:
-            rscs = [ cls(r, session) for r in res ]
-            # for rsc in rscs:
-            #     session.register(rsc)
+            rscs = [ cls(r) for r in res ]
+            for rsc in rscs:
+                session.register(rsc)
             return rscs
         else:
             raise "Resources not found"
@@ -90,106 +95,6 @@ class Resource(object):
 
     # def __len__(self):
     #     return len(self.graph)   
-
-class Thing(object):
-    def __init__(self):
-        self.rdfClass="owl:Thing"
-        self.uri = None
-
-    def set_uri(rabid=None,prefix="http://vivo.brown.individual/"):
-        if rabid is None:
-            raise Exception("rabid need for uri creation")
-        self.uri = prefix + rabid
-
-    def new(self, prefix=None):
-        generate_uri(self, prefix)
-
-    def all(self, filters=None):
-        construct = [
-            (None, 'rdf:type', self.rdfClass),
-            (None, 'rdfs:label', None)
-            ]
-        where =     [
-            (None, 'rdf:type', self.rdfClass),
-            (None, 'rdfs:label', None)
-            ]
-        if filters:
-            for p,o in filters.items():
-                where.append((None,p,o))
-        results = sparql.construct(construct,where)
-        for s,p,o in results.graph.triples( (None, None, None)):
-            print s,p,o
-
-    def find(self, uri=None):
-        q = u"""
-        CONSTRUCT {{
-            <{uri}> ?p ?o .
-            ?o rdfs:label ?label .
-        }}
-        WHERE {{
-            <uri> rdf:type {rdfClass} .
-            <{uri}> ?p ?o .
-            OPTIONAL {{ ?o rdfs:label ?label . }}
-        }}
-        """.format(uri=uri)
-        results = sparql.query(q).graph
-        for s,p,o in results.triples( (None, None, None)):
-            print s,p,o
-
-class Credential(Thing):
-    rdfClass = "bprofile:Credential"
-    
-    @classmethod
-    def all(cls):
-        result = sparql.all(rdfClass=cls.rdfClass)
-        for r in result:
-            print r
-
-    def __init__(self, uri=None, stmts=None):
-        self.rdfClass = 'bprofile:Credential'
-        self.rabid = None
-        self.uri = uri
-        self.triples = [
-            ('foo','rdf:type',self.rdfClass),
-            ('foo','bprofile:credentialFor','bar')
-        ]
-        if stmts:
-            self.triples = [s for s in stmts]
-
-
-    def rdfType(self):
-        return properties.rdfType(obj=self.rdfClass)
-
-    def credentialFor(self):
-        return property_lookup(
-            self.triples,
-            'http://vivo.brown.edu/ontology/profile#credentialFor')
-
-    @classmethod
-    def new(cls):
-        pass
-
-    @classmethod
-    def create(cls):
-        pass
-
-    @classmethod
-    def find(cls, rabid=None):
-        if rabid is None:
-            raise Exception("No rabid provided")
-        uri = "http://vivo.brown.edu/individual/" + rabid
-        stmts = sparql.describe(uri)
-        if stmts:
-            return Credential(uri=uri,stmts=stmts)
-
-    def update(self):
-        pass
-
-    def save(self):
-        pass
-
-    def destroy(self):
-        pass
 
 class FisFaculty(Resource):
     rdfType = Edge(properties.rdfType,Required,

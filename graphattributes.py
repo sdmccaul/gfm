@@ -15,7 +15,7 @@ class Edge(object):
 	def __get__(self, instance, cls):
 		if instance:
 			pattern = self.attr(
-				res=instance.node, val=None)
+				res=instance.uri, val=None)
 			return get_values(instance.graph.query(pattern))
 		else:
 			return self.edgetype(*(self.attr(res=None, val=None)))	
@@ -27,12 +27,12 @@ class Edge(object):
 		elif isinstance(value, ListType):
 			self.__delete__(instance)
 			add = { self.attr(
-						res=instance.node, val=v)
+						res=instance.uri, val=v)
 							for v in value }
 			instance.graph.update(add)
 		else:
 			raise Exception("expected list value")
 
 	def __delete__(self, instance):
-		pattern = self.attr(res=instance.node, val=None)
+		pattern = self.attr(res=instance.uri, val=None)
 		instance.graph.query_and_remove(pattern)

@@ -77,6 +77,20 @@ def write_statement(rule):
 def write_optional(rule):
 	return optionalize_rule(write_statement(rule))
 
+
+def setify(jdict):
+	out = DataSet([])
+	for sbj, objs in jdict.items():
+		for prd, obj in objs.items():
+			for o in obj:
+				if o["type"] == "literal":
+					out.add(Datum(sbj,prd,o['value']))
+				elif o["type"] == "uri":
+					out.add(Datum(sbj,prd,"<"+o['value']+">"))
+				else:
+					raise "Unrecognized datatype"
+	return out
+
 class QueryInterface(object):
 	def __init__(self):
 		self.construct_template = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
@@ -100,7 +114,8 @@ class QueryInterface(object):
 		construct_pattern = rqrd_cnst + optl_cnst
 		where_pattern = rqrd_where + optl_where
 		qbody = self.construct_template.format(construct_pattern, where_pattern)
-		return qbody
+		resp = self.query(qbody)
+		return resp
 
 	def find_all(self, pattern):
 		rqrd_cnst = ""
@@ -122,14 +137,15 @@ class QueryInterface(object):
 		construct_pattern = rqrd_cnst + optl_cnst
 		where_pattern = rqrd_where + optl_where
 		qbody = self.construct_template.format(construct_pattern, where_pattern)
-		return qbody
+		resp = self.query(qbody)
+		return resp
 
-	def query(qbody):
+	def query(self,qbody):
 		endpoint = "http://localhost:8082/VIVO/query"
 		payload = {'output': 'json'}
 		payload['query'] = qbody
 		with contextlib.closing(requests.get(endpoint, params=payload)) as resp:
 			if resp.status_code == 200:
-				return resp.json()
+				return setify(resp.json())
 			else:
-				raise "Fuseki endpoint returned error!"
+				return None
