@@ -5,7 +5,7 @@ import properties
 
 class Resource(object):
     def __init__(self, uri, sessionGraph):
-        self.sessionGraph = sessionGraph
+        self.graph = sessionGraph.workingGraph
         self.uri = uri
         self.edges = {
             getattr(self.__class__,k).att: k
@@ -27,12 +27,6 @@ class Resource(object):
 
     def destroy(self):
         pass
-
-    def setSession(self, graph):
-        self.sessionGraph = graph
-
-    def unsetGraph(self):
-        self.sessionGraph = None
 
     @classmethod
     def pattern(cls, res=None):
