@@ -3,9 +3,8 @@ from graphattributes import Edge
 from datasets import DataSet, Datum, Required, Linked, Optional
 import properties
 
-
 class Resource(object):
-    def __init__(self, uri, sessionGraph=set()):
+    def __init__(self, uri, sessionGraph):
         self.sessionGraph = sessionGraph
         self.uri = uri
         self.edges = {

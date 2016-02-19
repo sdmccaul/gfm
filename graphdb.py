@@ -91,11 +91,21 @@ def setify(jdict):
 					raise "Unrecognized datatype"
 	return out
 
+def patternToString(pattern, queryType):
+	"""pattern in. Does it need a queryType,
+	or is that determined by function making the call?"""
+	pass
+
+def jsonToPattern(jdict):
+	"""pattern out. This is a better implementation
+	of setify()."""
+	pass
+
 class QueryInterface(object):
 	def __init__(self):
 		self.construct_template = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
 
-	def find(self, pattern):
+	def fetch(self, pattern):
 		rqrd_cnst = ""
 		rqrd_where = ""
 		optl_cnst = ""
@@ -117,7 +127,7 @@ class QueryInterface(object):
 		resp = self.query(qbody)
 		return resp
 
-	def find_all(self, pattern):
+	def fetchAll(self, pattern):
 		rqrd_cnst = ""
 		rqrd_where = ""
 		optl_cnst = ""

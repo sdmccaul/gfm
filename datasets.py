@@ -36,6 +36,15 @@ class DataSet(MutableSet):
 	def __len__(self):
 		return len(self.data)
 
+	def sample(self):
+		"""Copied from pop(), but no discard."""
+		it = iter(self)
+		try:
+			value = next(it)
+		except StopIteration:
+			raise KeyError
+		return value
+
 	def add(self, key):
 		if isinstance(key, Datum):
 			self.data.add(key)
