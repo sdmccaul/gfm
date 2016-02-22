@@ -9,11 +9,14 @@ def variableGenerator(r):
 	for v in vals:
 		yield "?"+str(v)
 
+def addBracks(inStr):
+	return "<"+inStr+">"
+
 def qualify(inStr):
 	if inStr is None or inStr.startswith("?"):
 		return inStr
 	else:
-		return "<"+ inStr + ">"
+		return addBracks(inStr)
 
 def sparvar(inStr):
 	return "?" + inStr
@@ -78,20 +81,6 @@ def write_statement(rule):
 def write_optional(rule):
 	return optionalize_rule(write_statement(rule))
 
-
-def setify(jdict):
-	out = DataSet([])
-	for sbj, objs in jdict.items():
-		for prd, obj in objs.items():
-			for o in obj:
-				if o["type"] == "literal":
-					out.add(Datum(sbj,prd,o['value']))
-				elif o["type"] == "uri":
-					out.add(Datum(sbj,prd,"<"+o['value']+">"))
-				else:
-					raise "Unrecognized datatype"
-	return out
-
 def patternToString(pattern, queryType):
 	"""pattern in. Does it need a queryType,
 	or is that determined by function making the call?"""
@@ -106,9 +95,17 @@ def jsonToPattern(jdict, result=None):
 		for prd, obj_list in prd_dict.items():
 			for obj_dict in obj_list:
 				if obj_dict["type"] == "uri":
-					addDatum = Datum(sbj,prd,"<"+obj_dict['value']+">")
+					addDatum = Datum(
+						addBracks(sbj),
+						addBracks(prd),
+						addBracks(obj_dict['value'])
+						)
 				else:
-					addDatum = Datum(sbj, prd, obj_dict["value"])
+					addDatum = Datum(
+						addBracks(sbj),
+						addBracks(prd),
+						obj_dict["value"]
+						)
 				result.append(addDatum)
 	return DataSet(result)
 
@@ -141,10 +138,12 @@ class QueryInterface(object):
 		return resp
 
 	def fetchAll(self, pattern):
+		"""
+		Currently does not support optional queries,
+		due to performance concerns.
+		"""
 		rqrd_cnst = ""
 		rqrd_where = ""
-		optl_cnst = ""
-		optl_where = ""
 		pattern = variablize(pattern)
 		pattern = all_variablize(pattern)
 		for p in pattern:
