@@ -13,7 +13,7 @@ def addBracks(inStr):
 	return "<"+inStr+">"
 
 def qualify(inStr):
-	if inStr is None or inStr.startswith("?"):
+	if inStr is None or inStr.startswith(("?","<")):
 		return inStr
 	else:
 		return addBracks(inStr)
@@ -94,13 +94,13 @@ def jsonToTriples(sbj, stmts):
 		for obj_dict in obj_list:
 			if obj_dict["type"] == "uri":
 				addDatum = Datum(
-					addBracks(sbj),
+					sbj,
 					addBracks(prd),
 					addBracks(obj_dict['value'])
 					)
 			else:
 				addDatum = Datum(
-					addBracks(sbj),
+					sbj,
 					addBracks(prd),
 					obj_dict["value"]
 					)
@@ -109,8 +109,10 @@ def jsonToTriples(sbj, stmts):
 
 def parseSubGraphs(queryResults):
 	resultGraphs = dict()
-	for sbj in queryResults:		
-		resultGraphs[sbj] = jsonToTriples(sbj, queryResults[sbj])
+	for sbj in queryResults:
+		qualifiedSbj = addBracks(sbj)		
+		resultGraphs[qualifiedSbj] = jsonToTriples(
+			qualifiedSbj, queryResults[sbj])
 	return resultGraphs
 
 class QueryInterface(object):

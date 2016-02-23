@@ -4,8 +4,8 @@ from datasets import DataSet, Datum, Required, Linked, Optional
 import properties
 
 class Resource(object):
-    def __init__(self, uri, sessionGraph):
-        self.graph = sessionGraph
+    def __init__(self, uri, graph=None):
+        self.graph = graph
         self.uri = uri
         self.edges = {
             getattr(self.__class__,k).att: k
@@ -45,9 +45,9 @@ class Resource(object):
 
     @classmethod
     def find(cls, uri, session):
-        res = session.find(cls.pattern(uri))
+        res = session.fetch(cls.pattern(uri))
         if res:
-            rsc = cls(res, session)
+            rsc = cls(res)
             session.register(rsc)
             return rsc
         else:
@@ -55,7 +55,7 @@ class Resource(object):
 
     @classmethod
     def find_all(cls, session):
-        res = session.find_all(cls.pattern())
+        res = session.fetchAll(cls.pattern())
         if res:
             rscs = [ cls(r) for r in res ]
             for rsc in rscs:
