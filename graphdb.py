@@ -86,34 +86,36 @@ def patternToString(pattern, queryType):
 	or is that determined by function making the call?"""
 	pass
 
-def jsonToPattern(jdict, result=None):
+def jsonToTriples(sbj, stmts):
 	"""pattern out. This is a better implementation
 	of setify()."""
-	result = []
-	for sbj in jdict:
-		prd_dict = jdict[sbj]
-		for prd, obj_list in prd_dict.items():
-			for obj_dict in obj_list:
-				if obj_dict["type"] == "uri":
-					addDatum = Datum(
-						addBracks(sbj),
-						addBracks(prd),
-						addBracks(obj_dict['value'])
-						)
-				else:
-					addDatum = Datum(
-						addBracks(sbj),
-						addBracks(prd),
-						obj_dict["value"]
-						)
-				result.append(addDatum)
-	return DataSet(result)
+	triples = []
+	for prd, obj_list in stmts.items():
+		for obj_dict in obj_list:
+			if obj_dict["type"] == "uri":
+				addDatum = Datum(
+					addBracks(sbj),
+					addBracks(prd),
+					addBracks(obj_dict['value'])
+					)
+			else:
+				addDatum = Datum(
+					addBracks(sbj),
+					addBracks(prd),
+					obj_dict["value"]
+					)
+			triples.append(addDatum)
+	return DataSet(triples)
 
+def parseSubGraphs(queryResults):
+	resultGraphs = dict()
+	for sbj in queryResults:		
+		resultGraphs[sbj] = jsonToTriples(sbj, queryResults[sbj])
+	return resultGraphs
 
 class QueryInterface(object):
 	def __init__(self):
 		self.construct_template = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
-		self.identify_template = u"CONSTRUCT{{?sbj <http://www.w3.org/2000/01/rdf-schema#label>?label.}}WHERE{{{0}?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label.}}"
 
 	def fetch(self, pattern):
 		rqrd_cnst = ""
@@ -158,17 +160,17 @@ class QueryInterface(object):
 		return resp
 
 	def identifyAll(self,pattern):
-		rqrd_where = ""
-		optl_where = ""
-		pattern.add(Required(*(rdfsLabel())))
+		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
+		rqrd_where = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
 		pattern = variablize(pattern)
 		pattern = all_variablize(pattern)
 		for p in pattern:
 			if isinstance(p,Required):
 				stmt = write_statement(p)
 				rqrd_where += stmt
+		construct_pattern = rqrd_cnst
 		where_pattern = rqrd_where
-		qbody = self.identify_template.format(where_pattern)
+		qbody = self.construct_template.format(construct_pattern,where_pattern)
 		resp = self.query(qbody)
 		return resp
 
@@ -178,6 +180,6 @@ class QueryInterface(object):
 		payload['query'] = qbody
 		with contextlib.closing(requests.get(endpoint, params=payload)) as resp:
 			if resp.status_code == 200:
-				return jsonToPattern(resp.json())
+				return parseSubGraphs(resp.json())
 			else:
 				return None
