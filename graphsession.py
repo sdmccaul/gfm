@@ -8,17 +8,23 @@ class Session(object):
 	def __init__(self, dbInt, initGraph=DataSet([])):
 		self.dbInt = dbInt
 		self.initGraph = initGraph
-		self.workingGraph = initGraph.copy()
 		self.views = []
+		self.resources = defaultdict(DataSet)
+
+	def mergeDataSets(self, dsetList):
+		return DataSet([dtm for dset in dsetList
+							for dtm in dset])
 
 	def register(self, view):
-		if view.pattern(res=view.uri) in self.workingGraph:
+		if view.uri in self.resources:
+			view.graph = self.resources[view.uri]
 			self.views.append(view)
 		else:
 			raise ("Pattern not found!")
 
 	def unregister(self, view):
-		if view.pattern(res=view.uri) in self.workingGraph:
+		if view.uri in self.resources:
+			view.graph = None
 			self.views.remove(view)
 		else:
 			raise ("Pattern not found!")
@@ -30,9 +36,11 @@ class Session(object):
 		"""fetch reflects current state of datastore"""
 		found = self.dbInt.fetch(pattern)
 		if found:
-			self.initGraph.update(found)
-			self.workingGraph.update(found)
-			res = found.sample().res
+			res = found.keys()[0]
+			self.resources[res].update(found[res])
+			self.initGraph.update(
+				self.mergeDataSets(found.values()
+					))
 			return res
 		else:
 			return None
@@ -40,20 +48,23 @@ class Session(object):
 	def fetchAll(self, pattern):
 		found = self.dbInt.fetchAll(pattern)
 		if found:
-			self.initGraph.update(found)
-			self.workingGraph.update(found)
-			res = { f.res for f in found}
+			res = [ f for f in found.keys() ]
+			for r in res:
+				self.resources[r].update(found[r])
+			self.initGraph.update(
+				self.mergeDataSets(found.values()
+					))
 			return res
 		else:
 			return None
 
 	def commit(self):
-		if self.initGraph != self.workingGraph:
-			remove = self.initGraph - self.workingGraph
-			add = self.workingGraph - self.initGraph
+		workingGraph = self.mergeDataSets(self.resources.values())
+		if self.initGraph != workingGraph:
+			remove = self.initGraph - workingGraph
+			add = workingGraph - self.initGraph
 			self.dbInt.executeUpdate(add=add, remove=remove)
 			self.initGraph.clear()
-			self.workingGraph.clear()
 		self.close()
 
 	def rollback(self):

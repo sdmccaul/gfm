@@ -5,7 +5,7 @@ import properties
 
 class Resource(object):
     def __init__(self, uri, sessionGraph):
-        self.graph = sessionGraph.workingGraph
+        self.graph = sessionGraph
         self.uri = uri
         self.edges = {
             getattr(self.__class__,k).att: k
