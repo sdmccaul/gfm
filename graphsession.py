@@ -1,6 +1,7 @@
 from collections import defaultdict
 
-from datasets import DataSet, Required
+from datasets import DataSet
+from graphattributes import Required
 from graphdb import QueryInterface
 
 class Session(object):

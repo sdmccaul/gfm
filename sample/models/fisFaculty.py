@@ -1,10 +1,9 @@
 from graphview import Resource
-from graphattributes import Edge
-from datasets import Required, Linked, Optional
+from graphattributes import Edge, Required, Optional, Linked
 from properties import blocal, rdfs, rdf, foaf, vivo
 
 class FisFaculty(Resource):
-    rdfType = Edge(rdf.rdfType,Required,
+    rdfType = Edge(rdf.rdfType, Required,
         values=[
             '<http://vivoweb.org/ontology/core#FacultyMember>',
             '<http://vivo.brown.edu/ontology/vivo-brown/BrownThing>'

@@ -1,8 +1,8 @@
 import requests
 import contextlib
 
-from properties import rdfsLabel
-from datasets import Datum, DataSet, Required, Optional, Linked
+from datasets import Datum, DataSet
+from graphattributes import Required, Optional, Linked
 
 def variableGenerator(r):
 	vals = range(r)

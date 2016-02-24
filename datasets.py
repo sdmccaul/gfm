@@ -104,18 +104,3 @@ class Datum(namedtuple('Datum',['res', 'att', 'val'])):
 			return True
 		else:
 			return False
-
-class Required(Datum):
-	pass
-
-class Linked(Datum):
-	pass
-
-class Optional(Datum):
-	pass
-
-class Exclude(Datum):
-	pass
-
-class Only(Datum):
-	pass

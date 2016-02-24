@@ -1,5 +1,5 @@
-from graphattributes import Edge
-from datasets import DataSet, Required, Linked, Optional
+from graphattributes import Edge, Required, Linked, Optional
+from datasets import DataSet
 
 class Resource(object):
     def __init__(self, uri, graph=None):

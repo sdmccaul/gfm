@@ -38,3 +38,18 @@ class Edge(object):
 	def __delete__(self, instance):
 		pattern = self.attr(res=instance.uri, val=None)
 		instance.graph.query_and_remove(pattern)
+
+class Required(Datum):
+	pass
+
+class Linked(Datum):
+	pass
+
+class Optional(Datum):
+	pass
+
+class Exclude(Datum):
+	pass
+
+class Only(Datum):
+	pass
