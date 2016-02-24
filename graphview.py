@@ -1,7 +1,5 @@
-from collections import defaultdict
 from graphattributes import Edge
-from datasets import DataSet, Datum, Required, Linked, Optional
-import properties
+from datasets import DataSet, Required, Linked, Optional
 
 class Resource(object):
     def __init__(self, uri, graph=None):
@@ -93,15 +91,3 @@ class Resource(object):
 
     # def __len__(self):
     #     return len(self.graph)   
-
-class FisFaculty(Resource):
-    rdfType = Edge(properties.rdfType,Required,
-        values=[
-            '<http://vivoweb.org/ontology/core#FacultyMember>',
-            '<http://vivo.brown.edu/ontology/vivo-brown/BrownThing>'
-            ])
-    shortId = Edge(properties.blocalShortId, Required) 
-    label = Edge(properties.rdfsLabel, Required)
-    first = Edge(properties.foafFirstName, Optional)
-    last = Edge(properties.foafLastName, Optional)
-    title = Edge(properties.vivoPreferredTitle, Optional)
