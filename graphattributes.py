@@ -8,9 +8,10 @@ def get_values(dset):
 	return [ d[2] for d in dset ]
 
 class Edge(object):
-	def __init__(self, attr, edgetype, values=None):
+	def __init__(self, attr, edgetype, values=[None]):
 		self.attr = attr
 		self.edgetype = edgetype
+		self.values = values
 
 	def __get__(self, instance, cls):
 		if instance:
@@ -18,7 +19,8 @@ class Edge(object):
 				res=instance.uri, val=None)
 			return get_values(instance.graph.query(pattern))
 		else:
-			return self.edgetype(*(self.attr(res=None, val=None)))	
+			return [ self.edgetype(*(self.attr(res=None, val=v)))
+						for v in self.values ]
 
 	def __set__(self, instance, value):
 		if not value or isinstance(value, TruthType):

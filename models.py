@@ -7,8 +7,11 @@ class Resource(object):
     def __init__(self, uri, graph=None):
         self.graph = graph
         self.uri = uri
+        # [0] index needed because Edges now return Datum lists
+        # in order to accommodate prerequisite property values
+        # consider side effects, alternatives
         self.edges = {
-            getattr(self.__class__,k).att: k
+            getattr(self.__class__,k)[0].att: k
                 for k, v in self.__class__.__dict__.items()
                     if isinstance(v, Edge)
         }
@@ -31,16 +34,18 @@ class Resource(object):
     @classmethod
     def pattern(cls, res=None):
         qset = DataSet([])
-        for k in cls.__dict__.keys():
-            att = getattr(cls,k)
-            if isinstance(att, Required):
-                qset.add(att._replace(res=res))
-            elif isinstance(att, Optional):
-                qset.add(att._replace(res=res))
-            elif isinstance(att, Linked):
-                qset.add(att._replace(val=res))
-            else:
-                continue
+        for k,v in cls.__dict__.items():
+            if isinstance(v, Edge):
+                attValList = getattr(cls,k)
+                for att in attValList:
+                    if isinstance(att, Required):
+                        qset.add(att._replace(res=res))
+                    elif isinstance(att, Optional):
+                        qset.add(att._replace(res=res))
+                    elif isinstance(att, Linked):
+                        qset.add(att._replace(val=res))
+                    else:
+                        continue
         return qset
 
     @classmethod
@@ -54,7 +59,7 @@ class Resource(object):
             raise "Resource not found"
 
     @classmethod
-    def find_all(cls, session):
+    def findAll(cls, session):
         res = session.fetchAll(cls.pattern())
         if res:
             rscs = [ cls(r) for r in res ]
@@ -92,11 +97,11 @@ class Resource(object):
 class FisFaculty(Resource):
     rdfType = Edge(properties.rdfType,Required,
         values=[
-            'http://vivoweb.org/ontology/core#FacultyMember',
-            'http://vivo.brown.edu/ontology/vivo-brown/BrownThing'
+            '<http://vivoweb.org/ontology/core#FacultyMember>',
+            '<http://vivo.brown.edu/ontology/vivo-brown/BrownThing>'
             ])
     shortId = Edge(properties.blocalShortId, Required) 
-    label = Edge(properties.rdfsLabel, Optional)
+    label = Edge(properties.rdfsLabel, Required)
     first = Edge(properties.foafFirstName, Optional)
     last = Edge(properties.foafLastName, Optional)
     title = Edge(properties.vivoPreferredTitle, Optional)
