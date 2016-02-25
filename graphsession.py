@@ -64,21 +64,16 @@ class Session(object):
 		if self.initGraph != workingGraph:
 			remove = self.initGraph - workingGraph
 			add = workingGraph - self.initGraph
-			return add, remove
-		return None, None
-		# 	rmvResp = self.graphStore.update(data=remove, action="remove")
-		# 	addResp = self.graphStore.update(data=add, action="add")
-		# 	if ((addResp.status_code != 200) || (rmvResp.status_code != 200)):
-		# 		raise "Bad update!"
-		# 	self.initGraph.clear()
-		# self.close()
+			rmvResp = self.graphStore.update(data=remove, action="remove")
+			addResp = self.graphStore.update(data=add, action="add")
+			if (addResp.status_code != 200 or rmvResp.status_code != 200) :
+				raise "Bad update!"
+			self.initGraph.clear()
+		self.close()
 
 	def rollback(self):
 		self.workingGraph = self.initGraph
 
 	def close(self):
-		if self.initGraph != self.workingGraph:
-			raise "Uncommited changes!"
-		else:
-			for view in self.views:
-				del view
+		for view in self.views:
+			del view

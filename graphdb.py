@@ -36,6 +36,21 @@ def make_object_variable(q,var):
 	else:
 		return q
 
+def wrap_literals(dataStr):
+	return "\""+dataStr+"\""
+
+def sanitize(dataStr):
+	if dataStr.startswith("<"):
+		return dataStr
+	#need to force unicode via properties
+	elif isinstance(dataStr, unicode):
+		return wrap_literals(dataStr)
+	else:
+		raise Exception("bad data!")
+
+def sanitize_triples(s,p,o):
+	return sanitize(s),sanitize(p),sanitize(o)
+
 def write_rule(s,p,o):
 	return "{0}{1}{2}.".format(s,p,o)
 
@@ -81,6 +96,9 @@ def write_statement(rule):
 def write_optional(rule):
 	return optionalize_rule(write_statement(rule))
 
+def write_triples(pattern):
+	return write_rule(*(sanitize_triples(*(pattern))))
+
 def patternToString(pattern, queryType):
 	"""pattern in. Does it need a queryType,
 	or is that determined by function making the call?"""
@@ -115,14 +133,14 @@ def parseSubGraphs(queryResults):
 			qualifiedSbj, queryResults[sbj])
 	return resultGraphs
 
-defaultGraph = "<http://vitro.mannlib.cornell.edu/default/vitro-kb-2>"
 
+defaultGraph = "<http://vitro.mannlib.cornell.edu/default/vitro-kb-2>"
 
 class GraphInterface(object):
 	def __init__(self):
 		self.constructTemplate = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
-		self.insertTemplate = u"INSERTDATA{{{0}}}"
-		self.deleteTemplate = u"DELETEDATA{{{0}}}"
+		self.insertTemplate = u"INSERTDATA{{GRAPH{0}{{{1}}}}}"
+		self.deleteTemplate = u"DELETEDATA{{GRAPH{0}{{{1}}}}}"
 
 	def fetch(self, pattern):
 		rqrd_cnst = ""
@@ -191,26 +209,26 @@ class GraphInterface(object):
 			else:
 				return None
 
-	def update(self, data, action):
+	def update(self, data, action, graph=defaultGraph):
 		postPattern = ""
 		for triple in data:
-			postPattern += write_rule(*(triple))
-		if "action" == "add":
-			pbody = self.insertTemplate.format(postPattern)
-		elif "action" == "remove":
-			pbody = self.deleteTemplate.format(postPattern)
+			postPattern += write_triples(triple)
+		if action == "add":
+			pbody = self.insertTemplate.format(graph,postPattern)
+		elif action == "remove":
+			pbody = self.deleteTemplate.format(graph,postPattern)
 		else:
-			raise "Unrecognized action"
+			raise Exception("Unrecognized action")
 		resp = self.post(pbody)
 		return resp
 
-	def post(self,qbody):
+	def post(self,pbody):
 		endpoint ="http://localhost:8080/rab/api/sparqlUpdate"
 		payload = {
 					'email': "vivo_root@brown.edu",
 					'password': "goVivo"
 					}
-		payload['update'] = qbody
+		payload['update'] = pbody
 		with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
 			if resp.status_code == 200:
 				return resp
