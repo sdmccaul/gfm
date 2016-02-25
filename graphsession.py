@@ -64,7 +64,7 @@ class Session(object):
 		if self.initGraph != workingGraph:
 			remove = self.initGraph - workingGraph
 			add = workingGraph - self.initGraph
-			self.dbInt.executeUpdate(add=add, remove=remove)
+			self.dbInt.update(add=add, remove=remove)
 			self.initGraph.clear()
 		self.close()
 

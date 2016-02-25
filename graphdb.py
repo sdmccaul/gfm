@@ -185,3 +185,17 @@ class QueryInterface(object):
 				return parseSubGraphs(resp.json())
 			else:
 				return None
+
+	def update(self,qbody):
+		endpoint ="http://localhost:8080/rab/api/sparqlUpdate"
+		payload = {
+					'email': "vivo_root@brown.edu",
+					'password': "goVivo"
+					}
+		payload['update'] = qbody
+		with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
+			if resp.status_code == 200:
+				return resp
+			else:
+				return resp
+
