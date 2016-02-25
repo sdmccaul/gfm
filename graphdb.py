@@ -115,9 +115,14 @@ def parseSubGraphs(queryResults):
 			qualifiedSbj, queryResults[sbj])
 	return resultGraphs
 
-class QueryInterface(object):
+defaultGraph = "<http://vitro.mannlib.cornell.edu/default/vitro-kb-2>"
+
+
+class GraphInterface(object):
 	def __init__(self):
-		self.construct_template = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
+		self.constructTemplate = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
+		self.insertTemplate = u"INSERTDATA{{{0}}}"
+		self.deleteTemplate = u"DELETEDATA{{{0}}}"
 
 	def fetch(self, pattern):
 		rqrd_cnst = ""
@@ -137,8 +142,8 @@ class QueryInterface(object):
 				optl_where += optl
 		construct_pattern = rqrd_cnst + optl_cnst
 		where_pattern = rqrd_where + optl_where
-		qbody = self.construct_template.format(construct_pattern, where_pattern)
-		resp = self.query(qbody)
+		qbody = self.constructTemplate.format(construct_pattern, where_pattern)
+		resp = self.get(qbody)
 		return resp
 
 	def fetchAll(self, pattern):
@@ -157,8 +162,8 @@ class QueryInterface(object):
 				rqrd_where += stmt
 		construct_pattern = rqrd_cnst
 		where_pattern = rqrd_where
-		qbody = self.construct_template.format(construct_pattern, where_pattern)
-		resp = self.query(qbody)
+		qbody = self.constructTemplate.format(construct_pattern, where_pattern)
+		resp = self.get(qbody)
 		return resp
 
 	def identifyAll(self,pattern):
@@ -172,11 +177,11 @@ class QueryInterface(object):
 				rqrd_where += stmt
 		construct_pattern = rqrd_cnst
 		where_pattern = rqrd_where
-		qbody = self.construct_template.format(construct_pattern,where_pattern)
-		resp = self.query(qbody)
+		qbody = self.constructTemplate.format(construct_pattern,where_pattern)
+		resp = self.get(qbody)
 		return resp
 
-	def query(self,qbody):
+	def get(self,qbody):
 		endpoint = "http://localhost:8082/VIVO/query"
 		payload = {'output': 'json'}
 		payload['query'] = qbody
@@ -186,7 +191,20 @@ class QueryInterface(object):
 			else:
 				return None
 
-	def update(self,qbody):
+	def update(self, data, action):
+		postPattern = ""
+		for triple in data:
+			postPattern += write_rule(*(triple))
+		if "action" == "add":
+			pbody = self.insertTemplate.format(postPattern)
+		elif "action" == "remove":
+			pbody = self.deleteTemplate.format(postPattern)
+		else:
+			raise "Unrecognized action"
+		resp = self.post(pbody)
+		return resp
+
+	def post(self,qbody):
 		endpoint ="http://localhost:8080/rab/api/sparqlUpdate"
 		payload = {
 					'email': "vivo_root@brown.edu",
@@ -197,5 +215,5 @@ class QueryInterface(object):
 			if resp.status_code == 200:
 				return resp
 			else:
-				return resp
+				return None
 

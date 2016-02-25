@@ -2,12 +2,12 @@ from collections import defaultdict
 
 from datasets import DataSet
 from graphattributes import Required
-from graphdb import QueryInterface
+from graphdb import GraphInterface
 
 class Session(object):
 
-	def __init__(self, dbInt, initGraph=DataSet([])):
-		self.dbInt = dbInt
+	def __init__(self, graphInt, initGraph=DataSet([])):
+		self.graphStore = graphInt
 		self.initGraph = initGraph
 		self.views = []
 		self.resources = defaultdict(DataSet)
@@ -35,7 +35,7 @@ class Session(object):
 
 	def fetch(self, pattern):
 		"""fetch reflects current state of datastore"""
-		found = self.dbInt.fetch(pattern)
+		found = self.graphStore.fetch(pattern)
 		if found:
 			res = found.keys()[0]
 			self.resources[res].update(found[res])
@@ -47,7 +47,7 @@ class Session(object):
 			return None
 
 	def fetchAll(self, pattern):
-		found = self.dbInt.fetchAll(pattern)
+		found = self.graphStore.fetchAll(pattern)
 		if found:
 			res = [ f for f in found.keys() ]
 			for r in res:
@@ -64,9 +64,14 @@ class Session(object):
 		if self.initGraph != workingGraph:
 			remove = self.initGraph - workingGraph
 			add = workingGraph - self.initGraph
-			self.dbInt.update(add=add, remove=remove)
-			self.initGraph.clear()
-		self.close()
+			return add, remove
+		return None, None
+		# 	rmvResp = self.graphStore.update(data=remove, action="remove")
+		# 	addResp = self.graphStore.update(data=add, action="add")
+		# 	if ((addResp.status_code != 200) || (rmvResp.status_code != 200)):
+		# 		raise "Bad update!"
+		# 	self.initGraph.clear()
+		# self.close()
 
 	def rollback(self):
 		self.workingGraph = self.initGraph
