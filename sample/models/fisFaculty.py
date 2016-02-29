@@ -5,8 +5,8 @@ from properties import blocal, rdfs, rdf, foaf, vivo
 class FisFaculty(Resource):
     rdfType = Edge(rdf.rdfType, Required,
         values=[
-            '<http://vivoweb.org/ontology/core#FacultyMember>',
-            '<http://vivo.brown.edu/ontology/vivo-brown/BrownThing>'
+            'http://vivoweb.org/ontology/core#FacultyMember',
+            'http://vivo.brown.edu/ontology/vivo-brown/BrownThing'
             ])
     shortId = Edge(blocal.shortId, Required) 
     label = Edge(rdfs.label, Required)

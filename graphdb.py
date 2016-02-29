@@ -1,8 +1,53 @@
 import requests
 import contextlib
 
+import graphdatatypes
 from datasets import Datum, DataSet
 from graphattributes import Required, Optional, Linked
+
+
+def mapJsonDataType(dtype):
+	mapper = {
+		"http://www.w3.org/2001/XMLSchema#string":
+			graphdatatypes.XSDString,
+		"http://www.w3.org/2001/XMLSchema#boolean":
+			graphdatatypes.XSDBoolean,
+		"http://www.w3.org/2001/XMLSchema#decimal":
+			graphdatatypes.XSDDecimal,
+		"http://www.w3.org/2001/XMLSchema#float":
+			graphdatatypes.XSDFloat,
+		"http://www.w3.org/2001/XMLSchema#double":
+			graphdatatypes.XSDDouble,
+		"http://www.w3.org/2001/XMLSchema#duration":
+			graphdatatypes.XSDDuration,
+		"http://www.w3.org/2001/XMLSchema#dateTime":
+			graphdatatypes.XSDDatime,
+		"http://www.w3.org/2001/XMLSchema#time":
+			graphdatatypes.XSDTime,
+		"http://www.w3.org/2001/XMLSchema#date":
+			graphdatatypes.XSDDate,
+		"http://www.w3.org/2001/XMLSchema#gYearMonth":
+			graphdatatypes.XSDYearMonth,
+		"http://www.w3.org/2001/XMLSchema#gYear":
+			graphdatatypes.XSDYear,
+		"http://www.w3.org/2001/XMLSchema#gMonthDay":
+			graphdatatypes.XSDMonthDay,
+		"http://www.w3.org/2001/XMLSchema#gDay":
+			graphdatatypes.XSDDay,
+		"http://www.w3.org/2001/XMLSchema#gMonth":
+			graphdatatypes.XSDMonth,
+		"http://www.w3.org/2001/XMLSchema#hexBinary":
+			graphdatatypes.XSDHexBinary,
+		"http://www.w3.org/2001/XMLSchema#base64Binary":
+			graphdatatypes.XSDBase64Binary,
+		"http://www.w3.org/2001/XMLSchema#anyURI":
+			graphdatatypes.XSDAnyURI,
+		"http://www.w3.org/2001/XMLSchema#QName":
+			graphdatatypes.XSDQName,
+		"http://www.w3.org/2001/XMLSchema#NOTATION":
+			graphdatatypes.XSDNOTATION,
+	}
+
 
 def variableGenerator(r):
 	vals = range(r)
@@ -112,15 +157,19 @@ def jsonToTriples(sbj, stmts):
 		for obj_dict in obj_list:
 			if obj_dict["type"] == "uri":
 				addDatum = Datum(
-					sbj,
-					addBracks(prd),
-					addBracks(obj_dict['value'])
+					graphdatatypes.URI(sbj),
+					graphdatatypes.URI(prd),
+					graphdatatypes.URI(obj_dict['value'])
 					)
 			else:
+				if "datatype" in obj_dict:
+					dtype = mapJsonDataType(obj_dict['datatype'])
+				else:
+					dtype = graphdatatypes.XSDString
 				addDatum = Datum(
-					sbj,
-					addBracks(prd),
-					obj_dict["value"]
+					graphdatatypes.URI(sbj),
+					graphdatatypes.URI(prd),
+					dtype(obj_dict["value"])
 					)
 			triples.append(addDatum)
 	return DataSet(triples)
@@ -128,9 +177,7 @@ def jsonToTriples(sbj, stmts):
 def parseSubGraphs(queryResults):
 	resultGraphs = dict()
 	for sbj in queryResults:
-		qualifiedSbj = addBracks(sbj)		
-		resultGraphs[qualifiedSbj] = jsonToTriples(
-			qualifiedSbj, queryResults[sbj])
+		resultGraphs[sbj] = jsonToTriples(sbj, queryResults[sbj])
 	return resultGraphs
 
 
