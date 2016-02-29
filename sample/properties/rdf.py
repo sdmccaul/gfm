@@ -1,4 +1,6 @@
 from datasets import Datum
+from graphdatatypes import URI, objectProperty
 
-def rdfType(res=None, val=None):
-	return Datum(res,'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', val)
+@objectProperty
+def rdfType(res, val):
+	return Datum(res,URI('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), val)

@@ -1,3 +1,7 @@
+############################################
+### BEGIN classed datatypes ################
+### Add behavior for printing to rdf #######
+############################################
 
 class DataType(str):
 	def __new__(cls, value):
@@ -96,4 +100,24 @@ class XSDQName(DataType):
 class XSDNOTATION(DataType):
 	xsdType = "NOTATION"
 	rdfTemplate = xsdDataTemplate(xsdType)
-	
+
+############################################
+### BEGIN datatype decorators ##############
+### for enforcing data validation ##########
+### via property functions #################
+############################################
+
+def validate_uri_string(string):
+	if string.startswith(("http://","https://")):
+		return string
+	else:
+		raise ValueError("\""+string + "\" is not a valid URI string")
+
+def objectProperty(func):
+	def restriction(res=None, val=None):
+		if res:
+			res = URI(validate_uri_string(res))
+		if val:
+			val = URI(validate_uri_string(val))
+		return func(res, val)
+	return restriction
