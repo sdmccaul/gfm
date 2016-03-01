@@ -1,6 +1,7 @@
 from datasets import Datum
-from graphdatatypes import URI, objectProperty
+from graphdatatypes import URI, objectProperty, dataProperty
 
+@dataProperty
 def preferredTitle(res=None, val=None):
 	return Datum(res,URI('http://vivoweb.org/ontology/core#preferredTitle'), val)
 

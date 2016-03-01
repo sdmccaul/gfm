@@ -113,10 +113,27 @@ def validate_uri_string(string):
 	else:
 		raise ValueError("\""+string + "\" is not a valid URI string")
 
-def objectProperty(func):
+def validate_string(string):
+	return string.decode('utf-8')
+
+def resourceProperty(func):
 	def restriction(res=None, val=None):
 		if res:
 			res = URI(validate_uri_string(res))
+		return func(res, val)
+	return restriction
+
+def dataProperty(func):
+	@resourceProperty
+	def restriction(res=None, val=None):
+		if val:
+			val = XSDString(validate_string(val))
+		return func(res, val)
+	return restriction
+
+def objectProperty(func):
+	@resourceProperty
+	def restriction(res=None, val=None):
 		if val:
 			val = URI(validate_uri_string(val))
 		return func(res, val)
