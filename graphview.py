@@ -1,10 +1,11 @@
 from graphattributes import Edge, Required, Linked, Optional
+from graphdatatypes import URI
 from datasets import DataSet
 
 class Resource(object):
     def __init__(self, uri, graph=None):
         self.graph = graph
-        self.uri = uri
+        self.uri = URI(uri)
         # [0] index needed because Edges now return Datum lists
         # in order to accommodate prerequisite property values
         # consider side effects, alternatives
@@ -48,7 +49,7 @@ class Resource(object):
 
     @classmethod
     def find(cls, uri, session):
-        res = session.fetch(cls.pattern(uri))
+        res = session.fetch(cls.pattern(URI(uri)))
         if res:
             rsc = cls(res)
             session.register(rsc)

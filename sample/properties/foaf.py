@@ -1,7 +1,10 @@
 from datasets import Datum
+from graphdatatypes import URI, objectProperty, dataProperty
 
+@dataProperty
 def firstName(res=None, val=None):
-	return Datum(res,'http://xmlns.com/foaf/0.1/firstName', val)
+	return Datum(res,URI('http://xmlns.com/foaf/0.1/firstName'), val)
 
+@dataProperty
 def lastName(res=None, val=None):
-	return Datum(res,'http://xmlns.com/foaf/0.1/lastName', val)
+	return Datum(res,URI('http://xmlns.com/foaf/0.1/lastName'), val)

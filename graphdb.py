@@ -6,6 +6,10 @@ from datasets import Datum, DataSet
 from graphattributes import Required, Optional, Linked
 
 
+class SPARQLVariable(str):
+	def __init__(self, val):
+		self.rdf = "?"+str(val)
+
 def mapJsonDataType(dtype):
 	mapper = {
 		"http://www.w3.org/2001/XMLSchema#string":
@@ -52,65 +56,21 @@ def mapJsonDataType(dtype):
 def variableGenerator(r):
 	vals = range(r)
 	for v in vals:
-		yield "?"+str(v)
-
-def addBracks(inStr):
-	return "<"+inStr+">"
-
-def qualify(inStr):
-	if inStr is None or inStr.startswith(("?","<")):
-		return inStr
-	else:
-		return addBracks(inStr)
-
-def sparvar(inStr):
-	return "?" + inStr
-
-def qualify_rule(s,p,o):
-	return qualify(s), qualify(p), qualify(o)
+		yield v
 
 def make_subject_variable(q,var):
 	if q.res is None:
-		return q._replace(res=var)
+		return q._replace(res=SPARQLVariable(var))
 	else:
 		return q
 
 def make_object_variable(q,var):
 	if q.val is None:
-		return q._replace(val=var)
+		return q._replace(val=SPARQLVariable(var))
 	else:
 		return q
 
-def wrap_literals(dataStr):
-	return "\""+dataStr+"\""
-
-def sanitize(dataStr):
-	if dataStr.startswith("<"):
-		return dataStr
-	#need to force unicode via properties
-	elif isinstance(dataStr, unicode):
-		return wrap_literals(dataStr)
-	else:
-		raise Exception("bad data!")
-
-def sanitize_triples(s,p,o):
-	return sanitize(s),sanitize(p),sanitize(o)
-
-def write_rule(s,p,o):
-	return "{0}{1}{2}.".format(s,p,o)
-
-def optionalize_rule(rule):
-	return "OPTIONAL{{{0}}}".format(rule)
-
-def sparqlify(qset):
-	if isinstance(qset, FindQuery):
-		pass
-	elif isinstance(qset, AllQuery):
-		pass
-	else:
-		raise "Unrecognized query"
-
-def variablize(qset):
+def variablize_values(qset):
 	out = DataSet([])
 	varJar = variableGenerator(100)
 	for q in qset:
@@ -123,10 +83,10 @@ def variablize(qset):
 			continue
 	return out
 
-def all_variablize(qset):
+def variablize_resource(qset):
 	out = DataSet([])
 	for q in qset:
-		var  = "?sbj"
+		var  = "sbj"
 		if (isinstance(q,Required) or isinstance(q,Optional)):
 			out.add(make_subject_variable(q, var))
 		elif isinstance(q,Linked):
@@ -135,19 +95,15 @@ def all_variablize(qset):
 			continue
 	return out
 
-def write_statement(rule):
-	return write_rule(*(qualify_rule(*(rule))))
+def write_statement(pattern):
+	return "{0}{1}{2}.".format(
+		pattern.res.rdf,pattern.att.rdf,pattern.val.rdf)
 
-def write_optional(rule):
-	return optionalize_rule(write_statement(rule))
+def optionalize_rule(rule):
+	return "OPTIONAL{{{0}}}".format(rule)
 
-def write_triples(pattern):
-	return write_rule(*(sanitize_triples(*(pattern))))
-
-def patternToString(pattern, queryType):
-	"""pattern in. Does it need a queryType,
-	or is that determined by function making the call?"""
-	pass
+def write_optional(pattern):
+	return optionalize_rule(write_statement(pattern))
 
 def jsonToTriples(sbj, stmts):
 	"""pattern out. This is a better implementation
@@ -180,7 +136,6 @@ def parseSubGraphs(queryResults):
 		resultGraphs[sbj] = jsonToTriples(sbj, queryResults[sbj])
 	return resultGraphs
 
-
 defaultGraph = "<http://vitro.mannlib.cornell.edu/default/vitro-kb-2>"
 
 class GraphInterface(object):
@@ -194,7 +149,7 @@ class GraphInterface(object):
 		rqrd_where = ""
 		optl_cnst = ""
 		optl_where = ""
-		pattern = variablize(pattern)
+		pattern = variablize_values(pattern)
 		for p in pattern:
 			if isinstance(p,Required):
 				stmt = write_statement(p)
@@ -218,8 +173,8 @@ class GraphInterface(object):
 		"""
 		rqrd_cnst = ""
 		rqrd_where = ""
-		pattern = variablize(pattern)
-		pattern = all_variablize(pattern)
+		pattern = variablize_values(pattern)
+		pattern = variablize_resource(pattern)
 		for p in pattern:
 			if isinstance(p,Required):
 				stmt = write_statement(p)
@@ -234,8 +189,8 @@ class GraphInterface(object):
 	def identifyAll(self,pattern):
 		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
 		rqrd_where = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
-		pattern = variablize(pattern)
-		pattern = all_variablize(pattern)
+		pattern = variablize_values(pattern)
+		pattern = variablize_resource(pattern)
 		for p in pattern:
 			if isinstance(p,Required):
 				stmt = write_statement(p)
@@ -259,15 +214,16 @@ class GraphInterface(object):
 	def update(self, data, action, graph=defaultGraph):
 		postPattern = ""
 		for triple in data:
-			postPattern += write_triples(triple)
+			postPattern += write_statement(triple)
 		if action == "add":
 			pbody = self.insertTemplate.format(graph,postPattern)
 		elif action == "remove":
 			pbody = self.deleteTemplate.format(graph,postPattern)
 		else:
 			raise Exception("Unrecognized action")
-		resp = self.post(pbody)
-		return resp
+		print pbody
+		# resp = self.post(pbody)
+		# return resp
 
 	def post(self,pbody):
 		endpoint ="http://localhost:8080/rab/api/sparqlUpdate"

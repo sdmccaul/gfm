@@ -5,6 +5,8 @@
 
 class DataType(str):
 	def __new__(cls, value):
+		## add "validate" function, particular to class
+		## call on each value prior to __new__
 		obj = str.__new__(cls, value)
 		obj.rdf = cls.transform(value)
 		return obj
