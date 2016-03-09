@@ -87,7 +87,7 @@ class ResourceGraph(MutableSet):
 		return reply
 
 	def query_and_remove(self, **kwargs):
-		rmv = self.query(kwargs)
+		rmv = self.query(**kwargs)
 		self -= rmv
 
 	def update(self, other):
