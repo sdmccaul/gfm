@@ -2,7 +2,7 @@ import requests
 import contextlib
 
 import graphdatatypes
-from resourcegraphs import ResourceData, ResourceGraph
+from resourcegraphs import ResourceData, DataGraph
 from graphattributes import Required, Optional, Linked
 
 
@@ -71,7 +71,7 @@ def make_object_variable(q,var):
 		return q
 
 def variablize_values(qset):
-	out = ResourceGraph()
+	out = DataGraph()
 	varJar = variableGenerator(100)
 	for q in qset:
 		var  = varJar.next()
@@ -84,7 +84,7 @@ def variablize_values(qset):
 	return out
 
 def variablize_resource(qset):
-	out = ResourceGraph()
+	out = DataGraph()
 	for q in qset:
 		var  = "sbj"
 		if (isinstance(q,Required) or isinstance(q,Optional)):
@@ -128,7 +128,7 @@ def jsonToTriples(sbj, stmts):
 					dtype(obj_dict["value"])
 					)
 			triples.append(addResourceData)
-	return ResourceGraph(triples)
+	return DataGraph(triples)
 
 def parseSubGraphs(queryResults):
 	resultGraphs = dict()

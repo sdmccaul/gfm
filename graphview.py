@@ -1,6 +1,6 @@
 from graphattributes import Edge, Required, Linked, Optional
 from graphdatatypes import URI
-from resourcegraphs import ResourceGraph
+from resourcegraphs import DataGraph
 
 class Resource(object):
     def __init__(self, uri, graph=None):
@@ -32,7 +32,7 @@ class Resource(object):
 
     @classmethod
     def pattern(cls, res=None):
-        qset = ResourceGraph()
+        qset = DataGraph()
         for k,v in cls.__dict__.items():
             if isinstance(v, Edge):
                 attValList = getattr(cls,k)

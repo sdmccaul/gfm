@@ -2,16 +2,13 @@ from graphdatatypes import URI
 from collections import MutableSet, Iterable, namedtuple
 
 def graphFilter(graph, key, value): 
-	return ResourceGraph([d for d in graph
+	return DataGraph([d for d in graph
 							if getattr(d,key) == value])
 
-class ResourceGraph(MutableSet):
+class DataGraph(MutableSet):
 	def __init__(self, iterable=None):
 		self.data = set()
-		self._node = None
 		if iterable is not None:
-			self.node = URI(
-				next(iter(iterable)).res)
 			self |= iterable				
 
 	#Getters and setters for Resource Graph properties
@@ -45,26 +42,14 @@ class ResourceGraph(MutableSet):
 		return len(self.data)
 
 	def add(self, gdata):
-		if isinstance(gdata, ResourceData):			
-			if self.node:
-				if gdata.res == self.node:
-					self.data.add(gdata)
-				else:
-					raise ValueError("Bad resource value")
-			else:
-				self.data.add(gdata)
+		if isinstance(gdata, ResourceData):
+			self.data.add(gdata)
 		else:
 			raise TypeError("Expecting ResourceData object")
 
 	def discard(self, gdata):
-		if isinstance(gdata, ResourceData):			
-			if self.node:
-				if gdata.res == self.node:
-					self.data.discard(gdata)
-				else:
-					raise ValueError("Bad resource value")
-			else:
-				self.data.discard(gdata)
+		if isinstance(gdata, ResourceData):
+			self.data.discard(gdata)
 		else:
 			raise TypeError("Expecting ResourceData object")
 
@@ -95,6 +80,6 @@ class ResourceGraph(MutableSet):
 
 	def copy(self):
 		data = [ d for d in self.data ]
-		return ResourceGraph(data)
+		return DataGraph(data)
 
 ResourceData = namedtuple('ResourceData',['res', 'att', 'val'])
