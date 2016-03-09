@@ -1,5 +1,9 @@
-import graphdatatypes
+from graphdatatypes import URI
 from collections import MutableSet, Iterable, namedtuple
+
+def graphFilter(graph, key, value): 
+	return ResourceGraph([d for d in graph
+							if getattr(d,key) == value])
 
 class ResourceGraph(MutableSet):
 
@@ -14,7 +18,7 @@ class ResourceGraph(MutableSet):
 		self.data = set()
 		self._node = None
 		if iterable is not None:
-			self._node = graphdatatypes.URI(
+			self.node = URI(
 				next(iter(iterable)).res)
 			self |= iterable				
 
@@ -36,8 +40,8 @@ class ResourceGraph(MutableSet):
 		return self._node
 
 	@node.setter
-	def setNode(self, uri):
-		self._node = graphdatatypes.URI(uri)
+	def node(self, uri):
+		self._node = URI(uri)
 
 	@property
 	def arrows(self):
@@ -45,7 +49,7 @@ class ResourceGraph(MutableSet):
 
 	@property
 	def successors(self):
-		return { d.val for d in self.data}
+		return { d.val for d in self.data if isinstance(d, URI)}
 
 	def sample(self):
 		"""Copied from pop(), but no discard."""
@@ -70,12 +74,15 @@ class ResourceGraph(MutableSet):
 
 	# END REQUIRED MutableSet DEFINITIONS
 
-	def query(self, att):
-		return ResourceGraph(
-			[d for d in self.data if d.att == att ])
+	def query(self, **kwargs):
+		reply = self.data
+		for kwarg in kwargs:
+			if kwargs[kwarg]:
+				reply = graphFilter(reply, kwarg, kwargs[kwarg])
+		return reply
 
-	def query_and_remove(self, att):
-		rmv = self.query(att)
+	def query_and_remove(self, **kwargs):
+		rmv = self.query(kwargs)
 		self -= rmv
 
 	def update(self, other):
