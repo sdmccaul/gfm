@@ -1,5 +1,12 @@
 import requests
 import contextlib
+from collections import defaultdict
+
+import csv
+# the lineterminator doesn't do anthing,
+# but we can dream...
+csv.register_dialect('nt', delimiter=' ', lineterminator='.\n')
+from StringIO import StringIO
 
 import graphdatatypes
 from resourcegraphs import ResourceData, DataGraph
@@ -130,6 +137,12 @@ def jsonToTriples(sbj, stmts):
 			triples.append(addResourceData)
 	return DataGraph(triples)
 
+def parseNTriples(queryResults):
+	rdr = csv.reader(StringIO(queryResults), 'nt')
+	resultGraphs = defaultdict(DataGraph)
+	for row in rdr:
+		resultGraphs[row[0]].add(ResourceData(*row[:3]))
+
 def parseSubGraphs(queryResults):
 	resultGraphs = dict()
 	for sbj in queryResults:
@@ -203,7 +216,7 @@ class GraphInterface(object):
 
 	def get(self,qbody):
 		endpoint = "http://localhost:8082/VIVO/query"
-		payload = {'output': 'json'}
+		payload = {'output': 'nt'}
 		payload['query'] = qbody
 		with contextlib.closing(requests.get(endpoint, params=payload)) as resp:
 			if resp.status_code == 200:
@@ -221,9 +234,8 @@ class GraphInterface(object):
 			pbody = self.deleteTemplate.format(graph,postPattern)
 		else:
 			raise Exception("Unrecognized action")
-		print pbody
-		# resp = self.post(pbody)
-		# return resp
+		resp = self.post(pbody)
+		return resp
 
 	def post(self,pbody):
 		endpoint ="http://localhost:8080/rab/api/sparqlUpdate"
