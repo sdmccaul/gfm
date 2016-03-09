@@ -1,4 +1,4 @@
-from datasets import DataSet, Datum
+from resourcegraphs import ResourceData
 import types
 
 TruthType = (types.NoneType, types.BooleanType)
@@ -17,7 +17,8 @@ class Edge(object):
 		if instance:
 			pattern = self.attr(
 				res=instance.uri, val=None)
-			return get_values(instance.graph.query(pattern))
+			return get_values(
+					instance.graph.query(**pattern._asdict()))
 		else:
 			return [ self.edgetype(*(self.attr(res=None, val=v)))
 						for v in self.values ]
@@ -37,19 +38,19 @@ class Edge(object):
 
 	def __delete__(self, instance):
 		pattern = self.attr(res=instance.uri, val=None)
-		instance.graph.query_and_remove(pattern)
+		instance.graph.query_and_remove(**pattern._asdict())
 
-class Required(Datum):
+class Required(ResourceData):
 	pass
 
-class Linked(Datum):
+class Linked(ResourceData):
 	pass
 
-class Optional(Datum):
+class Optional(ResourceData):
 	pass
 
-class Exclude(Datum):
+class Exclude(ResourceData):
 	pass
 
-class Only(Datum):
+class Only(ResourceData):
 	pass

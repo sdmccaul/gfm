@@ -45,16 +45,28 @@ class ResourceGraph(MutableSet):
 		return len(self.data)
 
 	def add(self, gdata):
-		if gdata.res == self.node:
-			self.data.add(gdata)
+		if isinstance(gdata, ResourceData):			
+			if self.node:
+				if gdata.res == self.node:
+					self.data.add(gdata)
+				else:
+					raise ValueError("Bad resource value")
+			else:
+				self.data.add(gdata)
 		else:
-			raise TypeError("Expecting Datum object")
+			raise TypeError("Expecting ResourceData object")
 
 	def discard(self, gdata):
-		if gdata.res == self.node:
-			self.data.discard(gdata)
+		if isinstance(gdata, ResourceData):			
+			if self.node:
+				if gdata.res == self.node:
+					self.data.discard(gdata)
+				else:
+					raise ValueError("Bad resource value")
+			else:
+				self.data.discard(gdata)
 		else:
-			raise TypeError("Expecting Datum object")
+			raise TypeError("Expecting ResourceData object")
 
 	# END REQUIRED MutableSet DEFINITIONS
 

@@ -1,19 +1,19 @@
 from collections import defaultdict
 
-from datasets import DataSet
+from resourcegraphs import ResourceGraph
 from graphattributes import Required
 from graphdb import GraphInterface
 
 class Session(object):
 
-	def __init__(self, graphInt, initGraph=DataSet([])):
+	def __init__(self, graphInt, initGraph=ResourceGraph()):
 		self.graphStore = graphInt
 		self.initGraph = initGraph
 		self.views = []
-		self.resources = defaultdict(DataSet)
+		self.resources = defaultdict(ResourceGraph)
 
-	def mergeDataSets(self, dsetList):
-		return DataSet([dtm for dset in dsetList
+	def mergeResourceGraphs(self, dsetList):
+		return ResourceGraph([dtm for dset in dsetList
 							for dtm in dset])
 
 	def register(self, view):
@@ -40,7 +40,7 @@ class Session(object):
 			res = found.keys()[0]
 			self.resources[res].update(found[res])
 			self.initGraph.update(
-				self.mergeDataSets(found.values()
+				self.mergeResourceGraphs(found.values()
 					))
 			return res
 		else:
@@ -53,14 +53,14 @@ class Session(object):
 			for r in res:
 				self.resources[r].update(found[r])
 			self.initGraph.update(
-				self.mergeDataSets(found.values()
+				self.mergeResourceGraphs(found.values()
 					))
 			return res
 		else:
 			return None
 
 	def commit(self):
-		workingGraph = self.mergeDataSets(self.resources.values())
+		workingGraph = self.mergeResourceGraphs(self.resources.values())
 		if self.initGraph != workingGraph:
 			remove = self.initGraph - workingGraph
 			add = workingGraph - self.initGraph

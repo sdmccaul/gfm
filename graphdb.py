@@ -2,7 +2,7 @@ import requests
 import contextlib
 
 import graphdatatypes
-from datasets import Datum, DataSet
+from resourcegraphs import ResourceData, ResourceGraph
 from graphattributes import Required, Optional, Linked
 
 
@@ -71,7 +71,7 @@ def make_object_variable(q,var):
 		return q
 
 def variablize_values(qset):
-	out = DataSet([])
+	out = ResourceGraph()
 	varJar = variableGenerator(100)
 	for q in qset:
 		var  = varJar.next()
@@ -84,7 +84,7 @@ def variablize_values(qset):
 	return out
 
 def variablize_resource(qset):
-	out = DataSet([])
+	out = ResourceGraph()
 	for q in qset:
 		var  = "sbj"
 		if (isinstance(q,Required) or isinstance(q,Optional)):
@@ -112,7 +112,7 @@ def jsonToTriples(sbj, stmts):
 	for prd, obj_list in stmts.items():
 		for obj_dict in obj_list:
 			if obj_dict["type"] == "uri":
-				addDatum = Datum(
+				addResourceData = ResourceData(
 					graphdatatypes.URI(sbj),
 					graphdatatypes.URI(prd),
 					graphdatatypes.URI(obj_dict['value'])
@@ -122,13 +122,13 @@ def jsonToTriples(sbj, stmts):
 					dtype = mapJsonDataType(obj_dict['datatype'])
 				else:
 					dtype = graphdatatypes.XSDString
-				addDatum = Datum(
+				addResourceData = ResourceData(
 					graphdatatypes.URI(sbj),
 					graphdatatypes.URI(prd),
 					dtype(obj_dict["value"])
 					)
-			triples.append(addDatum)
-	return DataSet(triples)
+			triples.append(addResourceData)
+	return ResourceGraph(triples)
 
 def parseSubGraphs(queryResults):
 	resultGraphs = dict()
