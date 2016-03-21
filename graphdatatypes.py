@@ -7,16 +7,33 @@ class DataType(str):
 	def __new__(cls, value):
 		## add "validate" function, particular to class
 		## call on each value prior to __new__
-		obj = str.__new__(cls, value)
-		obj.rdf = cls.transform(value)
+		valid = cls.validate(value)
+		if valid is False:
+			raise ValueError(("{0} is not valid {1}").format(value, cls))
+		obj = str.__new__(cls, valid)
+		obj.rdf = cls.transform(valid)
 		return obj
 
 	@classmethod
 	def transform(cls, value):
 		return cls.rdfTemplate.format(literal=value)
 
+
+############################################
+### Generic URI datatype ###################
+############################################
+
 class URI(DataType):
 	rdfTemplate = "<{literal}>"
+
+	@classmethod
+	def validate(cls, value):
+		if value.startswith(("<http://","<https://")) and value.endswith(">"):
+			return value[1:-1]
+		elif value.startswith(("http://","https://")):
+			return value
+		else:
+			return False
 
 ############################################
 ### BEGIN XSD Primitive datatypes ##########
@@ -30,6 +47,13 @@ def xsdDataTemplate(dtype):
 class XSDString(DataType):
 	xsdType = "string"
 	rdfTemplate = xsdDataTemplate(xsdType)
+
+	@classmethod
+	def validate(cls,value):
+		try:
+			return value.decode('utf-8')
+		except:
+			return False
 
 class XSDBoolean(DataType):
 	xsdType = "boolean"
@@ -109,19 +133,10 @@ class XSDNOTATION(DataType):
 ### via property functions #################
 ############################################
 
-def validate_uri_string(string):
-	if string.startswith(("http://","https://")):
-		return string
-	else:
-		raise ValueError("\""+string + "\" is not a valid URI string")
-
-def validate_string(string):
-	return string.decode('utf-8')
-
 def resourceProperty(func):
 	def restriction(res=None, val=None):
 		if res:
-			res = URI(validate_uri_string(res))
+			res = URI(res)
 		return func(res, val)
 	return restriction
 
@@ -129,7 +144,7 @@ def dataProperty(func):
 	@resourceProperty
 	def restriction(res=None, val=None):
 		if val:
-			val = XSDString(validate_string(val))
+			val = XSDString(val)
 		return func(res, val)
 	return restriction
 
