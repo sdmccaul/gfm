@@ -9,13 +9,13 @@ csv.register_dialect('nt', delimiter=' ', lineterminator='.\n')
 from StringIO import StringIO
 
 import graphdatatypes
-from resourcegraphs import ResourceData, DataGraph
+from graphdata import ResourceData, DataGraph
 from graphattributes import Required, Optional, Linked
 
 
 def write_statement(pattern):
 	return "{0}{1}{2}.".format(
-		pattern.res.rdf,pattern.att.rdf,pattern.val.rdf)
+		pattern.res,pattern.att,pattern.val)
 
 def optionalize_rule(rule):
 	return "OPTIONAL{{{0}}}".format(rule)
@@ -55,6 +55,7 @@ def parseNTriples(queryResults):
 	resultGraphs = defaultdict(DataGraph)
 	for row in rdr:
 		resultGraphs[row[0]].add(ResourceData(*row[:3]))
+	return resultGraphs
 
 def parseSubGraphs(queryResults):
 	resultGraphs = dict()
@@ -70,21 +71,20 @@ class GraphInterface(object):
 		self.insertTemplate = u"INSERTDATA{{GRAPH{0}{{{1}}}}}"
 		self.deleteTemplate = u"DELETEDATA{{GRAPH{0}{{{1}}}}}"
 
-	def fetch(self, pattern):
+	def fetch(self, query):
 		rqrd_cnst = ""
 		rqrd_where = ""
 		optl_cnst = ""
 		optl_where = ""
-		pattern = variablize_values(pattern)
-		for p in pattern:
-			if isinstance(p,Required):
-				stmt = write_statement(p)
+		for q in query:
+			if isinstance(q,Required):
+				stmt = write_statement(q)
 				rqrd_cnst += stmt
 				rqrd_where += stmt
-			elif isinstance(p, Optional):
-				stmt = write_statement(p)
+			elif isinstance(q, Optional):
+				stmt = write_statement(q)
 				optl_cnst += stmt
-				optl = write_optional(p)
+				optl = write_optional(q)
 				optl_where += optl
 		construct_pattern = rqrd_cnst + optl_cnst
 		where_pattern = rqrd_where + optl_where
@@ -92,18 +92,16 @@ class GraphInterface(object):
 		resp = self.get(qbody)
 		return resp
 
-	def fetchAll(self, pattern):
+	def fetchAll(self, query):
 		"""
 		Currently does not support optional queries,
 		due to performance concerns.
 		"""
 		rqrd_cnst = ""
 		rqrd_where = ""
-		pattern = variablize_values(pattern)
-		pattern = variablize_resource(pattern)
-		for p in pattern:
-			if isinstance(p,Required):
-				stmt = write_statement(p)
+		for q in query:
+			if isinstance(q,Required):
+				stmt = write_statement(q)
 				rqrd_cnst += stmt
 				rqrd_where += stmt
 		construct_pattern = rqrd_cnst
@@ -112,7 +110,7 @@ class GraphInterface(object):
 		resp = self.get(qbody)
 		return resp
 
-	def identifyAll(self,pattern):
+	def identifyAll(self, query):
 		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
 		rqrd_where = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
 		pattern = variablize_values(pattern)
@@ -133,7 +131,7 @@ class GraphInterface(object):
 		payload['query'] = qbody
 		with contextlib.closing(requests.get(endpoint, params=payload)) as resp:
 			if resp.status_code == 200:
-				return parseNTriples(resp)
+				return parseNTriples(resp.text)
 			else:
 				return None
 

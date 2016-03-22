@@ -53,7 +53,7 @@ class QueryGraph(DataGraph):
 	def transform(self, other):
 		out = DataGraph()
 		for e in self:
-			resp = other.query(**e)
+			resp = other.query(**e._asdict())
 			if resp:
 				mapped = e.attr(resp.res, resp.val)
 				out.add(mapped)
