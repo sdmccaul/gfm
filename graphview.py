@@ -1,6 +1,6 @@
 from graphattributes import Edge, Required, Linked, Optional
 from graphdatatypes import URI
-from resourcegraphs import DataGraph
+from graphdata import DataGraph, QueryGraph, ResourceData
 
 class Resource(object):
     def __init__(self, uri, graph=None):
@@ -31,20 +31,21 @@ class Resource(object):
         pass
 
     @classmethod
-    def pattern(cls, res=None):
-        qset = DataGraph()
+    def model(cls, res=None):
+        qset = QueryGraph()
         for k,v in cls.__dict__.items():
             if isinstance(v, Edge):
-                attValList = getattr(cls,k)
-                for att in attValList:
-                    if isinstance(att, Required):
-                        qset.add(att._replace(res=res))
-                    elif isinstance(att, Optional):
-                        qset.add(att._replace(res=res))
-                    elif isinstance(att, Linked):
-                        qset.add(att._replace(val=res))
-                    else:
-                        continue
+                edges = getattr(cls,k)
+                for func, rdata in edges:
+                    if res:
+                        rdata = rdata._replace(res=res)
+                    qualified = rdata._replace(**(
+                        { k: getattr(rdata,k).rdf
+                            for k in rdata._fields
+                                if getattr(rdata,k) }
+                             ))
+                    qset.add(qualified)
+                    qset.filters[qualified] = func
         return qset
 
     @classmethod

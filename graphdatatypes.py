@@ -152,6 +152,6 @@ def objectProperty(func):
 	@resourceProperty
 	def restriction(res=None, val=None):
 		if val:
-			val = URI(validate_uri_string(val))
+			val = URI(val)
 		return func(res, val)
 	return restriction

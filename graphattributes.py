@@ -1,4 +1,4 @@
-from resourcegraphs import ResourceData
+from graphdata import ResourceData
 import types
 
 TruthType = (types.NoneType, types.BooleanType)
@@ -8,9 +8,9 @@ def get_values(dset):
 	return [ d[2] for d in dset ]
 
 class Edge(object):
-	def __init__(self, attr, edgetype, values=[None]):
+	def __init__(self, attr, restriction, values=[None]):
 		self.attr = attr
-		self.edgetype = edgetype
+		self.restriction = restriction
 		self.values = values
 
 	def __get__(self, instance, cls):
@@ -20,7 +20,8 @@ class Edge(object):
 			return get_values(
 					instance.graph.query(**pattern._asdict()))
 		else:
-			return [ self.edgetype(*(self.attr(res=None, val=v)))
+			return [ (self.attr, self.restriction(
+						*(self.attr(res=None, val=v))))
 						for v in self.values ]
 
 	def __set__(self, instance, value):
