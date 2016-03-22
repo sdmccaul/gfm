@@ -1,6 +1,7 @@
 from graphattributes import Edge, Required, Linked, Optional
 from graphdatatypes import URI
-from graphdata import DataGraph, QueryGraph, ResourceData
+from graphdata import DataGraph, ResourceData
+from graphquery import QueryGraph
 
 class Resource(object):
     def __init__(self, uri, graph=None):
@@ -38,6 +39,7 @@ class Resource(object):
                 edges = getattr(cls,k)
                 for func, rdata in edges:
                     if res:
+                        qset.resource = res.rdf
                         rdata = rdata._replace(res=res)
                     qualified = rdata._replace(**(
                         { k: getattr(rdata,k).rdf

@@ -83,18 +83,3 @@ class DataGraph(MutableSet):
 		return DataGraph(data)
 
 ResourceData = namedtuple('ResourceData',['res', 'att', 'val'])
-
-class QueryGraph(DataGraph):
-
-	def __init__(self):
-		self.filters = {}
-		super(QueryGraph, self).__init__()
-
-	def transform(self, other):
-		out = DataGraph()
-		for e in self:
-			resp = other.query(**e)
-			if resp:
-				mapped = e.attr(resp.res, resp.val)
-				out.add(mapped)
-		return out

@@ -13,95 +13,6 @@ from resourcegraphs import ResourceData, DataGraph
 from graphattributes import Required, Optional, Linked
 
 
-class SPARQLVariable(str):
-	def __init__(self, val):
-		self.rdf = "?"+str(val)
-
-def mapJsonDataType(dtype):
-	mapper = {
-		"http://www.w3.org/2001/XMLSchema#string":
-			graphdatatypes.XSDString,
-		"http://www.w3.org/2001/XMLSchema#boolean":
-			graphdatatypes.XSDBoolean,
-		"http://www.w3.org/2001/XMLSchema#decimal":
-			graphdatatypes.XSDDecimal,
-		"http://www.w3.org/2001/XMLSchema#float":
-			graphdatatypes.XSDFloat,
-		"http://www.w3.org/2001/XMLSchema#double":
-			graphdatatypes.XSDDouble,
-		"http://www.w3.org/2001/XMLSchema#duration":
-			graphdatatypes.XSDDuration,
-		"http://www.w3.org/2001/XMLSchema#dateTime":
-			graphdatatypes.XSDDatime,
-		"http://www.w3.org/2001/XMLSchema#time":
-			graphdatatypes.XSDTime,
-		"http://www.w3.org/2001/XMLSchema#date":
-			graphdatatypes.XSDDate,
-		"http://www.w3.org/2001/XMLSchema#gYearMonth":
-			graphdatatypes.XSDYearMonth,
-		"http://www.w3.org/2001/XMLSchema#gYear":
-			graphdatatypes.XSDYear,
-		"http://www.w3.org/2001/XMLSchema#gMonthDay":
-			graphdatatypes.XSDMonthDay,
-		"http://www.w3.org/2001/XMLSchema#gDay":
-			graphdatatypes.XSDDay,
-		"http://www.w3.org/2001/XMLSchema#gMonth":
-			graphdatatypes.XSDMonth,
-		"http://www.w3.org/2001/XMLSchema#hexBinary":
-			graphdatatypes.XSDHexBinary,
-		"http://www.w3.org/2001/XMLSchema#base64Binary":
-			graphdatatypes.XSDBase64Binary,
-		"http://www.w3.org/2001/XMLSchema#anyURI":
-			graphdatatypes.XSDAnyURI,
-		"http://www.w3.org/2001/XMLSchema#QName":
-			graphdatatypes.XSDQName,
-		"http://www.w3.org/2001/XMLSchema#NOTATION":
-			graphdatatypes.XSDNOTATION,
-	}
-
-
-def variableGenerator(r):
-	vals = range(r)
-	for v in vals:
-		yield v
-
-def make_subject_variable(q,var):
-	if q.res is None:
-		return q._replace(res=SPARQLVariable(var))
-	else:
-		return q
-
-def make_object_variable(q,var):
-	if q.val is None:
-		return q._replace(val=SPARQLVariable(var))
-	else:
-		return q
-
-def variablize_values(qset):
-	out = DataGraph()
-	varJar = variableGenerator(100)
-	for q in qset:
-		var  = varJar.next()
-		if (isinstance(q,Required) or isinstance(q,Optional)):
-			out.add(make_object_variable(q, var))
-		elif isinstance(q,Linked):
-			out.add(make_subject_variable(q, var))
-		else:
-			continue
-	return out
-
-def variablize_resource(qset):
-	out = DataGraph()
-	for q in qset:
-		var  = "sbj"
-		if (isinstance(q,Required) or isinstance(q,Optional)):
-			out.add(make_subject_variable(q, var))
-		elif isinstance(q,Linked):
-			out.add(make_object_variable(q, var))
-		else:
-			continue
-	return out
-
 def write_statement(pattern):
 	return "{0}{1}{2}.".format(
 		pattern.res.rdf,pattern.att.rdf,pattern.val.rdf)
@@ -119,23 +30,25 @@ def jsonToTriples(sbj, stmts):
 	for prd, obj_list in stmts.items():
 		for obj_dict in obj_list:
 			if obj_dict["type"] == "uri":
-				addResourceData = ResourceData(
-					graphdatatypes.URI(sbj),
-					graphdatatypes.URI(prd),
-					graphdatatypes.URI(obj_dict['value'])
+				triples.append(
+					tuple([qualifyURI(sbj),
+						qualifyURI(prd),
+						qualifyURI(obj_dict['value'])
+						])
 					)
 			else:
-				if "datatype" in obj_dict:
-					dtype = mapJsonDataType(obj_dict['datatype'])
+				datatype = obj_dict.get("datatype")
+				if datatype:
+					val = qualifyData(obj_dict["value"], datatype)
 				else:
-					dtype = graphdatatypes.XSDString
-				addResourceData = ResourceData(
-					graphdatatypes.URI(sbj),
-					graphdatatypes.URI(prd),
-					dtype(obj_dict["value"])
+					val = obj_dict["value"]
+				triples.append(
+					tuple([graphdatatypes.URI(sbj),
+						graphdatatypes.URI(prd),
+						val
+						])
 					)
-			triples.append(addResourceData)
-	return DataGraph(triples)
+	return set(triples)
 
 def parseNTriples(queryResults):
 	rdr = csv.reader(StringIO(queryResults), 'nt')
@@ -220,7 +133,7 @@ class GraphInterface(object):
 		payload['query'] = qbody
 		with contextlib.closing(requests.get(endpoint, params=payload)) as resp:
 			if resp.status_code == 200:
-				return parseSubGraphs(resp.json())
+				return parseNTriples(resp)
 			else:
 				return None
 
