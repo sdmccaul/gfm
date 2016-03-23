@@ -3,6 +3,7 @@ from collections import defaultdict
 from graphdata import DataGraph
 from graphattributes import Required
 from graphdb import GraphInterface
+from graphdatatypes import URI
 
 class Session(object):
 
@@ -33,12 +34,13 @@ class Session(object):
 	def notify_views(self):
 		pass
 
-	def fetch(self, pattern):
+	def fetch(self, model):
 		"""fetch reflects current state of datastore"""
-		found = self.graphStore.fetch(pattern)
+		found = self.graphStore.fetch(model.querySet())
 		if found:
-			res = found.keys()[0]
-			self.resources[res].update(found[res])
+			res = URI(found.keys()[0])
+			self.resources[res].update(
+				model.transform(found[res.rdf]))
 			self.initGraph.update(
 				self.mergeDataGraphs(found.values()
 					))
@@ -46,12 +48,13 @@ class Session(object):
 		else:
 			return None
 
-	def fetchAll(self, pattern):
-		found = self.graphStore.fetchAll(pattern)
+	def fetchAll(self, model):
+		found = self.graphStore.fetchAll(model.querySet())
 		if found:
-			res = [ f for f in found.keys() ]
+			res = [ URI(f) for f in found.keys() ]
 			for r in res:
-				self.resources[r].update(found[r])
+				self.resources[r].update(
+					model.transform(found[r.rdf]))
 			self.initGraph.update(
 				self.mergeDataGraphs(found.values()
 					))

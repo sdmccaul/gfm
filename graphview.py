@@ -10,8 +10,10 @@ class Resource(object):
         # [0] index needed because Edges now return Datum lists
         # in order to accommodate prerequisite property values
         # consider side effects, alternatives
+        # [0][1] index now necessary for .model() functions
+        # getting pretty ugly
         self.edges = {
-            getattr(self.__class__,k)[0].att: k
+            getattr(self.__class__,k)[0][1].att: k
                 for k, v in self.__class__.__dict__.items()
                     if isinstance(v, Edge)
         }
@@ -52,7 +54,7 @@ class Resource(object):
 
     @classmethod
     def find(cls, uri, session):
-        res = session.fetch(cls.pattern(URI(uri)))
+        res = session.fetch(cls.model(URI(uri)))
         if res:
             rsc = cls(res)
             session.register(rsc)
@@ -62,7 +64,7 @@ class Resource(object):
 
     @classmethod
     def findAll(cls, session):
-        res = session.fetchAll(cls.pattern())
+        res = session.fetchAll(cls.model())
         if res:
             rscs = [ cls(r) for r in res ]
             for rsc in rscs:
