@@ -40,20 +40,32 @@ class URI(DataType):
 ### https://www.w3.org/TR/xmlschema11-2/ ###
 ############################################
 
+# def xsdDataTemplate(dtype):
+# 	xsdNs = "<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
+# 	return "\"{literal}\"^^" + xsdNs
+
 def xsdDataTemplate(dtype):
-	xsdNs = "<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
-	return "\"{literal}\"^^" + xsdNs
+	return "<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
 
 class XSDString(DataType):
 	xsdType = "string"
-	rdfTemplate = xsdDataTemplate(xsdType)
+	xsdNs = xsdDataTemplate(xsdType)
+	rdfQualifier = "^^" + xsdNs
+	rdfTemplate = "\"{literal}\"" + rdfQualifier
 
 	@classmethod
 	def validate(cls,value):
 		try:
-			return value.decode('utf-8')
+			valid = value.decode('utf-8')
 		except:
 			return False
+		if valid.startswith('"') and valid.endswith(cls.rdfQualifier):
+			return valid[1:valid.index(cls.rdfQualifier)-1]
+		elif valid.startswith('"') and valid.endswith('"'):
+			return valid[1:-1]
+		else:
+			return valid
+
 
 class XSDBoolean(DataType):
 	xsdType = "boolean"

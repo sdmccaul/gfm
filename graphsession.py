@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from graphdata import DataGraph
+from graphdata import DataGraph, ResourceData
 from graphattributes import Required
 from graphdb import GraphInterface
 from graphdatatypes import URI
@@ -16,6 +16,12 @@ class Session(object):
 	def mergeDataGraphs(self, dsetList):
 		return DataGraph([dtm for dset in dsetList
 							for dtm in dset])
+
+	def prepDataGraphs(self, dsetList):
+		return DataGraph(
+			[ResourceData(dtm.res.rdf, dtm.att.rdf, dtm.val.rdf)
+				for dset in dsetList
+					for dtm in dset])
 
 	def register(self, view):
 		if view.uri in self.resources:
@@ -63,7 +69,7 @@ class Session(object):
 			return None
 
 	def commit(self):
-		workingGraph = self.mergeDataGraphs(self.resources.values())
+		workingGraph = self.prepDataGraphs(self.resources.values())
 		if self.initGraph != workingGraph:
 			remove = self.initGraph - workingGraph
 			add = workingGraph - self.initGraph

@@ -3,9 +3,11 @@ import contextlib
 from collections import defaultdict
 
 import csv
+import re
 # the lineterminator doesn't do anthing,
 # but we can dream...
-csv.register_dialect('nt', delimiter=' ', lineterminator='.\n')
+csv.register_dialect('nt', delimiter=' ', quotechar="'",
+					lineterminator='.\n')
 from StringIO import StringIO
 
 import graphdatatypes
@@ -50,11 +52,21 @@ def jsonToTriples(sbj, stmts):
 					)
 	return set(triples)
 
+# def parseNTriples(queryResults):
+# 	rdr = csv.reader(StringIO(queryResults), 'nt')
+# 	resultGraphs = defaultdict(DataGraph)
+# 	for row in rdr:
+# 		resultGraphs[row[0]].add(ResourceData(*row[:3]))
+# 	return resultGraphs
+
 def parseNTriples(queryResults):
-	rdr = csv.reader(StringIO(queryResults), 'nt')
 	resultGraphs = defaultdict(DataGraph)
-	for row in rdr:
-		resultGraphs[row[0]].add(ResourceData(*row[:3]))
+	f = StringIO(queryResults)
+	for line in f:
+		res, att, val = re.findall(
+			"<[^>\"]*>\W|\".*\"\^\^<.*>\W\.\n|\".*\"\W\.\n", line)
+		resultGraphs[res.rstrip()].add(ResourceData(
+			res.rstrip(), att.rstrip(), val.rstrip(' .\n')))
 	return resultGraphs
 
 def parseSubGraphs(queryResults):
@@ -131,7 +143,7 @@ class GraphInterface(object):
 			if resp.status_code == 200:
 				return parseNTriples(resp.text)
 			else:
-				return None
+				raise Exception("Failed get! {0}".format(resp.text))
 
 	def update(self, data, action, graph=defaultGraph):
 		postPattern = ""
@@ -153,9 +165,10 @@ class GraphInterface(object):
 					'password': "goVivo"
 					}
 		payload['update'] = pbody
-		with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
-			if resp.status_code == 200:
-				return resp
-			else:
-				return None
+		print pbody
+		# with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
+		# 	if resp.status_code == 200:
+		# 		return resp
+		# 	else:
+		# 		raise Exception("Failed post! {0}".format(resp.text))
 
