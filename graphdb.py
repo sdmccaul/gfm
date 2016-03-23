@@ -113,11 +113,9 @@ class GraphInterface(object):
 	def identifyAll(self, query):
 		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
 		rqrd_where = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
-		pattern = variablize_values(pattern)
-		pattern = variablize_resource(pattern)
-		for p in pattern:
-			if isinstance(p,Required):
-				stmt = write_statement(p)
+		for q in query:
+			if isinstance(q,Required):
+				stmt = write_statement(q)
 				rqrd_where += stmt
 		construct_pattern = rqrd_cnst
 		where_pattern = rqrd_where

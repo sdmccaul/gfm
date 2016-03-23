@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from resourcegraphs import DataGraph
+from graphdata import DataGraph
 from graphattributes import Required
 from graphdb import GraphInterface
 

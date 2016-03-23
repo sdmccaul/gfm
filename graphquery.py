@@ -52,11 +52,12 @@ class QueryGraph(DataGraph):
 
 	def transform(self, other):
 		out = DataGraph()
-		for e in self:
-			resp = other.query(**e._asdict())
+		for q in self:
+			resp = other.query(**q._asdict())
 			if resp:
-				mapped = e.attr(resp.res, resp.val)
-				out.add(mapped)
+				for r in resp:
+					mapped = self.filters[q](r.res, r.val)
+					out.add(mapped)
 		return out
 
 	def querySet(self):

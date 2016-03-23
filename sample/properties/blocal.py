@@ -1,4 +1,4 @@
-from resourcegraphs import ResourceData
+from graphdata import ResourceData
 from graphdatatypes import URI, objectProperty, dataProperty
 
 @dataProperty
