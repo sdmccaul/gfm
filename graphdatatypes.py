@@ -40,10 +40,6 @@ class URI(DataType):
 ### https://www.w3.org/TR/xmlschema11-2/ ###
 ############################################
 
-# def xsdDataTemplate(dtype):
-# 	xsdNs = "<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
-# 	return "\"{literal}\"^^" + xsdNs
-
 def xsdDataTemplate(dtype):
 	return "<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
 

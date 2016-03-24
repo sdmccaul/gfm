@@ -2,12 +2,7 @@ import requests
 import contextlib
 from collections import defaultdict
 
-import csv
 import re
-# the lineterminator doesn't do anthing,
-# but we can dream...
-csv.register_dialect('nt', delimiter=' ', quotechar="'",
-					lineterminator='.\n')
 from StringIO import StringIO
 
 import graphdatatypes
@@ -51,13 +46,6 @@ def jsonToTriples(sbj, stmts):
 						])
 					)
 	return set(triples)
-
-# def parseNTriples(queryResults):
-# 	rdr = csv.reader(StringIO(queryResults), 'nt')
-# 	resultGraphs = defaultdict(DataGraph)
-# 	for row in rdr:
-# 		resultGraphs[row[0]].add(ResourceData(*row[:3]))
-# 	return resultGraphs
 
 def parseNTriples(queryResults):
 	resultGraphs = defaultdict(DataGraph)
@@ -165,10 +153,9 @@ class GraphInterface(object):
 					'password': "goVivo"
 					}
 		payload['update'] = pbody
-		print pbody
-		# with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
-		# 	if resp.status_code == 200:
-		# 		return resp
-		# 	else:
-		# 		raise Exception("Failed post! {0}".format(resp.text))
+		with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
+			if resp.status_code == 200:
+				return resp
+			else:
+				raise Exception("Failed post! {0}".format(resp.text))
 
