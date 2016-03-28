@@ -19,16 +19,16 @@ def not_found(error):
 @app.route('/rabdata/vocabmgmt/term/<rabid>', methods=['GET'])
 def show_term(rabid):
 	sh = Session(gi)
-	term = VocabTerm.find(uri="http://vivo.brown.edu/individual/" + rabid, sh)
+	term = VocabTerm.find("http://vivo.brown.edu/individual/" + rabid, sh)
 	if not term:
 		abort(404)
 	else:
-		return jsonify(term)
+		return jsonify(term.to_dict())
 
 @app.route('/rabdata/vocabmgmt/term/<rabid>', methods=['PUT'])
 def update_term(rabid):
 	sh = Session(gi)
-	term = VocabTerm.find(uri="http://vivo.brown.edu/individual/" + rabid, sh)
+	term = VocabTerm.find("http://vivo.brown.edu/individual/" + rabid, sh)
 	data = request.json
 	if term.update(data=data):
 		term.save(sh)
@@ -49,4 +49,4 @@ def update_term(rabid):
 
 
 if __name__ == '__main__':
-	app.run(host='0.0.0.0', debug=True)
+	app.run(host='0.0.0.0', port=8000, debug=True)
