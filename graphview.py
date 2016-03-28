@@ -5,7 +5,7 @@ from graphdatatypes import URI
 from graphdata import DataGraph, ResourceData
 from graphquery import QueryGraph
 
-class Resource(MutableMapping):
+class Resource(object):
     def __init__(self, uri, graph=None):
         self.graph = graph
         self.uri = URI(uri)

@@ -52,7 +52,7 @@ class XSDString(DataType):
 	@classmethod
 	def validate(cls,value):
 		try:
-			valid = value.decode('utf-8')
+			valid = value.encode('ascii','ignore').decode('UTF-8', "replace")
 		except:
 			return False
 		if valid.startswith('"') and valid.endswith(cls.rdfQualifier):
