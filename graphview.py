@@ -1,9 +1,11 @@
+from collections import MutableMapping
+
 from graphattributes import Edge, Required, Linked, Optional
 from graphdatatypes import URI
 from graphdata import DataGraph, ResourceData
 from graphquery import QueryGraph
 
-class Resource(object):
+class Resource(MutableMapping):
     def __init__(self, uri, graph=None):
         self.graph = graph
         self.uri = URI(uri)
@@ -27,11 +29,16 @@ class Resource(object):
     def __delitem__(self, key):
         delattr(self, self.edges.__getitem__(key))
 
-    def update(self):
-        pass
+    def update(self, data):
+        for k, v in data.items():
+            self.__setitem__(k, v)
+        return True
 
     def destroy(self):
         pass
+
+    def save(self, session):
+        session.commit()
 
     @classmethod
     def model(cls, res=None):
@@ -74,11 +81,11 @@ class Resource(object):
             raise "Resources not found"
 
     @classmethod
-    def new(cls, session, **params):
-        uri = session.mint_new_uri(cls.prefix)
+    def new(cls, session, params):
+        uri = session.mintNewUri(cls.prefix)
         rsc = cls(uri)
         session.register(rsc)
-        rsc.update(**params)
+        rsc.update(params)
         return rsc
 
     @classmethod

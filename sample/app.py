@@ -1,43 +1,52 @@
 #!flask/bin/python
-from flask import Flask, jsonify
-from models import FisFaculty
+from flask import Flask, jsonify, abort, request, make_response, url_for
 
-from sparqldb import SparqlInterface
-from triplemanager import SessionGraph
+from models.VocabMgmt import VocabTerm
+from graphsession import Session
+from graphdb import GraphInterface
 
 app = Flask(__name__)
-db = SparqlInterface()
-access = SessionGraph(db)
+gi = GraphInterface()
 
+@app.errorhandler(404)
+def not_found(error):
+    return make_response(jsonify( { 'error': 'Not found' } ), 404)
 
-#@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['GET'])
-def index():
-	allFisFac = FisFaculty.all()
-	return jsonify(allFisFac)
+@app.errorhandler(400)
+def not_found(error):
+    return make_response(jsonify( { 'error': 'Bad request' } ), 400)
 
-@app.route('/rabdata/api/v0.1/fisfeed/faculty/', methods=['POST'])
-def create(params):
-	fisFac = FisFaculty.new(params)
-	if fisFac.save():
-		redirect(url_for('faculty'))
+@app.route('/rabdata/vocabmgmt/term/<rabid>', methods=['GET'])
+def show_term(rabid):
+	sh = Session(gi)
+	term = VocabTerm.find(uri="http://vivo.brown.edu/individual/" + rabid, sh)
+	if not term:
+		abort(404)
 	else:
-		pass
+		return jsonify(term)
 
-@app.route('/rabdata/api/v0.1/fisfeed/faculty/<rabid>', methods=['GET'])
-def show(rabid=None):
-	if rabid is None:
-        raise Exception("No rabid provided")
-	fisFac = FisFaculty.find(rabid=rabid)
-	return jsonify(fisfac)
-
-
-@app.route('/rabdata/api/v0.1/fisfeed/faculty/<rabid>', methods=['PUT'])
-def update(params):
-	fisFac = FisFaculty.find(rabid=rabid)
-	if fisFac.update(params=params):
-		redirect(url_for(rabid))
+@app.route('/rabdata/vocabmgmt/term/<rabid>', methods=['PUT'])
+def update_term(rabid):
+	sh = Session(gi)
+	term = VocabTerm.find(uri="http://vivo.brown.edu/individual/" + rabid, sh)
+	data = request.json
+	if term.update(data=data):
+		term.save(sh)
+		redirect(url_for('show_term', rabid=rabid))
 	else:
-		pass
+		abort(400)
+
+# @app.route('/rabdata/vocabmgmt/term/', methods=['POST'])
+# def new_term(rabid):
+# 	sh = Session(gi)
+# 	term = VocabTerm.find(uri="http://vivo.brown.edu/individual/" + rabid, sh)
+# 	data = request.json
+# 	if term.update(data=data):
+# 		term.save(sh)
+# 		redirect(url_for(rabid))
+# 	else:
+# 		pass
+
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0', debug=True)
