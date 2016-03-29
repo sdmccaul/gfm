@@ -1,11 +1,13 @@
 #!flask/bin/python
 from flask import Flask, jsonify, abort, request, make_response, url_for
+from flask.ext.cors import CORS
 
 from models.VocabMgmt import VocabTerm
 from graphsession import Session
 from graphdb import GraphInterface
 
 app = Flask(__name__)
+CORS(app)
 gi = GraphInterface()
 
 @app.errorhandler(404)
