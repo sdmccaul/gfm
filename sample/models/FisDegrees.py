@@ -1,8 +1,8 @@
-from graphview import Resource
+from graphview import ResourceView
 from graphattributes import Edge, Required, Optional, Linked
 from properties import blocal, rdfs, rdf, foaf, vivo
 
-class FisDegrees(Resource):
+class FisDegrees(ResourceView):
     rdfType = Edge(rdf.rdfType, Required,
         values=[
             'http://vivoweb.org/ontology/core#EducationalTraining'

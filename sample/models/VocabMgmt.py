@@ -1,8 +1,8 @@
-from graphview import Resource
+from graphview import ResourceView
 from graphattributes import Edge, Required, Optional, Linked
 from properties import skos, rdfs, rdf
 
-class VocabTerm(Resource):
+class VocabTerm(ResourceView):
 	rdfType = Edge(rdf.rdfType, Required,
     	values=['http://www.w3.org/2004/02/skos/core#Concept',
 		'http://vivo.brown.edu/ontology/vivo-brown/ResearchArea'])
