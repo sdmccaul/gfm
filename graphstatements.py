@@ -48,9 +48,9 @@ class URI(DataType):
 	@classmethod
 	def validate(cls, value):
 		if value.startswith(("<http://","<https://")) and value.endswith(">"):
-			return value[1:-1]
-		elif value.startswith(("http://","https://")):
 			return value
+		elif value.startswith(("http://","https://")):
+			return cls.transform(value)
 		else:
 			return False
 
@@ -60,12 +60,11 @@ class URI(DataType):
 ############################################
 
 def xsdDataTemplate(dtype):
-	return "<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
+	return "^^<http://www.w3.org/2001/XMLSchema#{0}>".format(dtype)
 
 class XSDString(DataType):
 	xsdType = "string"
-	xsdNs = xsdDataTemplate(xsdType)
-	rdfQualifier = "^^" + xsdNs
+	rdfQualifier = xsdDataTemplate(xsdType)
 	rdfTemplate = "\"{literal}\"" + rdfQualifier
 
 	@classmethod
@@ -74,13 +73,14 @@ class XSDString(DataType):
 			valid = value.encode('ascii','ignore').decode('UTF-8', "replace")
 		except:
 			return False
-		if valid.startswith('"') and valid.endswith(cls.rdfQualifier):
-			return valid[1:valid.index(cls.rdfQualifier)-1]
-		elif valid.startswith('"') and valid.endswith('"'):
-			return valid[1:-1]
-		else:
+		if valid.startswith('\"') and valid.endswith(cls.rdfQualifier):
 			return valid
-
+		elif valid.startswith('\"') and valid.endswith('\"'):
+			return valid + cls.rdfQualifier
+		elif valid.startswith('\'') and valid.endswith('\''):
+			return '\"' + valid[1:-1] + '\"' + cls.rdfQualifier
+		else:
+			return cls.transform(valid)
 
 class XSDBoolean(DataType):
 	xsdType = "boolean"
