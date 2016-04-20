@@ -1,21 +1,14 @@
-from collections import MutableMapping
-
-from graphattributes import Edge, Required, Linked, Optional
-from graphdatatypes import URI
-from graphdata import DataGraph, ResourceData
+from graphedges import Edge
+from graphstatements import URI
+from graphset import GraphSet
 from graphquery import QueryGraph
 
 class ResourceView(object):
     def __init__(self, uri, graph=None):
         self.graph = graph
         self.uri = URI(uri)
-        # [0] index needed because Edges now return Datum lists
-        # in order to accommodate prerequisite property values
-        # consider side effects, alternatives
-        # [0][1] index now necessary for .model() functions
-        # getting pretty ugly
         self.edges = {
-            getattr(self.__class__,k)[0][1].att: k
+            getattr(self.__class__,k).prp: k
                 for k, v in self.__class__.__dict__.items()
                     if isinstance(v, Edge)
         }
@@ -45,18 +38,12 @@ class ResourceView(object):
         qset = QueryGraph()
         for k,v in cls.__dict__.items():
             if isinstance(v, Edge):
-                edges = getattr(cls,k)
-                for func, rdata in edges:
+                stmts = getattr(cls,k)
+                for stmt in stmts:
                     if res:
-                        qset.resource = res.rdf
-                        rdata = rdata._replace(res=res)
-                    qualified = rdata._replace(**(
-                        { k: getattr(rdata,k).rdf
-                            for k in rdata._fields
-                                if getattr(rdata,k) }
-                             ))
-                    qset.add(qualified)
-                    qset.filters[qualified] = func
+                        qset.resource = res
+                        stmt = stmt._replace(sbj=res)
+                    qset.add(stmt)
         return qset
 
     @classmethod

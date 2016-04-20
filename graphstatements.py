@@ -1,5 +1,4 @@
-from collections import MutableSet, Sequence, Iterable, namedtuple
-from functools import partial
+from collections import namedtuple
 
 Statement = namedtuple('Statement', ['sbj', 'prp', 'obj'])
 

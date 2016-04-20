@@ -2,13 +2,10 @@
 from collections import defaultdict
 import csv
 
-from datasets import Datum, DataSet
+from graphfunction import GraphData
 
 init = set()
 with open('all_triples.csv','r') as f:
   csv_r = csv.reader(f)
   for row in csv_r:
-    s,p,o = map(clean_brackets,row)
-    init.add(Datum(s,p,o))
-
-tset=DataSet(init)
+    init.add(GraphData(row[0],row[1],row[2]))

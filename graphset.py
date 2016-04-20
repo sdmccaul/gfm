@@ -1,11 +1,11 @@
-from graphdatatypes import URI
-from collections import MutableSet, Iterable, namedtuple
+from graphstatments import Statement, URI
+from collections import MutableSet
 
 def graphFilter(graph, key, value): 
-	return DataGraph([d for d in graph
+	return GraphSet([d for d in graph
 							if getattr(d,key) == value])
 
-class DataGraph(MutableSet):
+class GraphSet(MutableSet):
 	def __init__(self, iterable=None):
 		self.data = set()
 		if iterable is not None:
@@ -41,17 +41,17 @@ class DataGraph(MutableSet):
 	def __len__(self):
 		return len(self.data)
 
-	def add(self, gdata):
-		if isinstance(gdata, ResourceData):
-			self.data.add(gdata)
+	def add(self, stmt):
+		if isinstance(stmt, Statement):
+			self.data.add(stmt)
 		else:
-			raise TypeError("Expecting ResourceData object")
+			raise TypeError("Expecting Statement object")
 
 	def discard(self, gdata):
-		if isinstance(gdata, ResourceData):
-			self.data.discard(gdata)
+		if isinstance(stmt, Statement):
+			self.data.discard(stmt)
 		else:
-			raise TypeError("Expecting ResourceData object")
+			raise TypeError("Expecting Statement object")
 
 	# END REQUIRED MutableSet DEFINITIONS
 
@@ -80,6 +80,4 @@ class DataGraph(MutableSet):
 
 	def copy(self):
 		data = [ d for d in self.data ]
-		return DataGraph(data)
-
-ResourceData = namedtuple('ResourceData',['res', 'att', 'val'])
+		return GraphSet(data)

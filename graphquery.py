@@ -1,6 +1,5 @@
-import graphdatatypes
-from graphattributes import Required, Optional, Linked
-from graphdata import DataGraph, ResourceData
+from graphstatements import Required, Optional, Linked
+from graphset import GraphSet
 
 def variableGenerator(r):
 	vals = range(r)
