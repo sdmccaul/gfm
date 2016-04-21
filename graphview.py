@@ -8,7 +8,7 @@ class ResourceView(object):
         self.graph = graph
         self.uri = URI(uri)
         self.edges = {
-            getattr(self.__class__,k).prp: k
+            v.prp: k
                 for k, v in self.__class__.__dict__.items()
                     if isinstance(v, Edge)
         }
