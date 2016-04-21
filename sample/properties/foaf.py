@@ -1,10 +1,9 @@
-from graphdata import ResourceData
-from graphdatatypes import URI, objectProperty, dataProperty
+from graphstatements import Statement, URI, dataProperty
 
 @dataProperty
-def firstName(res=None, val=None):
-	return ResourceData(res,URI('http://xmlns.com/foaf/0.1/firstName'), val)
+def firstName(sbj=None, obj=None):
+	return Statement(sbj,URI('http://xmlns.com/foaf/0.1/firstName'), obj)
 
 @dataProperty
-def lastName(res=None, val=None):
-	return ResourceData(res,URI('http://xmlns.com/foaf/0.1/lastName'), val)
+def lastName(sbj=None, obj=None):
+	return Statement(sbj,URI('http://xmlns.com/foaf/0.1/lastName'), obj)

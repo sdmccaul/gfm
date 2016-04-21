@@ -6,11 +6,11 @@ def get_values(dset):
 	return [ d[2] for d in dset ]
 
 class Edge(object):
-	def __init__(self, stmtFunc, stmtType, objs=[None]):
+	def __init__(self, stmtFunc, stmtType, values=[None]):
 		self.stmtFunc = stmtFunc
 		self.prp = stmtFunc().prp
 		self.stmtType = stmtType
-		self.objs = objs
+		self.objs = values
 
 	def __get__(self, instance, cls):
 		if instance:
@@ -20,7 +20,7 @@ class Edge(object):
 					instance.graph.query(**stmt._asdict()))
 		else:
 			return [ self.stmtType(
-							self.stmtFunc(sbj=None, obj=v)
+							*(self.stmtFunc(sbj=None, obj=o))
 						)
 						for o in self.objs ]
 

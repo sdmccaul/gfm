@@ -1,28 +1,27 @@
-from graphdata import ResourceData
-from graphdatatypes import URI, objectProperty, dataProperty
+from graphstatements import Statement, URI, objectProperty, dataProperty
 
 @objectProperty
-def broader(res=None, val=None):
-	return ResourceData(res,URI('http://www.w3.org/2004/02/skos/core#broader'), val)
+def broader(sbj=None, obj=None):
+	return Statement(sbj,URI('http://www.w3.org/2004/02/skos/core#broader'), obj)
 
 @objectProperty
-def narrower(res=None, val=None):
-	return ResourceData(res,URI('http://www.w3.org/2004/02/skos/core#narrower'), val)
+def narrower(sbj=None, obj=None):
+	return Statement(sbj,URI('http://www.w3.org/2004/02/skos/core#narrower'), obj)
 
 @objectProperty
-def related(res=None, val=None):
-	return ResourceData(res,URI('http://www.w3.org/2004/02/skos/core#related'), val)
+def related(sbj=None, obj=None):
+	return Statement(sbj,URI('http://www.w3.org/2004/02/skos/core#related'), obj)
 
 @dataProperty
-def prefLabel(res=None, val=None):
-	return ResourceData(res,URI('http://www.w3.org/2004/02/skos/core#prefLabel'), val)
-
-
-@dataProperty
-def altLabel(res=None, val=None):
-	return ResourceData(res,URI('http://www.w3.org/2004/02/skos/core#altLabel'), val)
+def prefLabel(sbj=None, obj=None):
+	return Statement(sbj,URI('http://www.w3.org/2004/02/skos/core#prefLabel'), obj)
 
 
 @dataProperty
-def hiddenLabel(res=None, val=None):
-	return ResourceData(res,URI('http://www.w3.org/2004/02/skos/core#hiddenLabel'), val)
+def altLabel(sbj=None, obj=None):
+	return Statement(sbj,URI('http://www.w3.org/2004/02/skos/core#altLabel'), obj)
+
+
+@dataProperty
+def hiddenLabel(sbj=None, obj=None):
+	return Statement(sbj,URI('http://www.w3.org/2004/02/skos/core#hiddenLabel'), obj)

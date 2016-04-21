@@ -1,10 +1,9 @@
-from graphdata import ResourceData
-from graphdatatypes import URI, objectProperty, dataProperty
+from graphstatements import Statement, URI, objectProperty, dataProperty
 
 @dataProperty
-def shortId(res=None, val=None):
-	return ResourceData(res,URI('http://vivo.brown.edu/ontology/vivo-brown/shortId'), val)
+def shortId(sbj=None, obj=None):
+	return Statement(sbj,URI('http://vivo.brown.edu/ontology/vivo-brown/shortId'), obj)
 
 @dataProperty
-def degreeDate(res=None, val=None):
-	return ResourceData(res,URI('http://vivo.brown.edu/ontology/vivo-brown/degreeDate'), val)
+def degreeDate(sbj=None, obj=None):
+	return Statement(sbj,URI('http://vivo.brown.edu/ontology/vivo-brown/degreeDate'), obj)

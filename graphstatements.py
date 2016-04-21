@@ -160,24 +160,24 @@ class XSDNOTATION(DataType):
 ############################################
 
 def resourceProperty(func):
-	def restriction(res=None, val=None):
-		if res:
-			res = URI(res)
-		return func(res, val)
+	def restriction(sbj=None, obj=None):
+		if sbj:
+			sbj = URI(sbj)
+		return func(sbj, obj)
 	return restriction
 
 def dataProperty(func):
 	@resourceProperty
-	def restriction(res=None, val=None):
-		if val:
-			val = XSDString(val)
-		return func(res, val)
+	def restriction(sbj=None, obj=None):
+		if obj:
+			obj = XSDString(obj)
+		return func(sbj, obj)
 	return restriction
 
 def objectProperty(func):
 	@resourceProperty
-	def restriction(res=None, val=None):
-		if val:
-			val = URI(val)
-		return func(res, val)
+	def restriction(sbj=None, obj=None):
+		if obj:
+			obj = URI(obj)
+		return func(sbj, obj)
 	return restriction

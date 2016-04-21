@@ -19,7 +19,7 @@ def make_object_variable(q,var):
 		return q
 
 def variablize_values(qset):
-	out = DataGraph()
+	out = GraphSet()
 	varJar = variableGenerator(100)
 	for q in qset:
 		var  = varJar.next()
@@ -32,7 +32,7 @@ def variablize_values(qset):
 	return out
 
 def variablize_resource(qset):
-	out = DataGraph()
+	out = GraphSet()
 	for q in qset:
 		var  = "?sbj"
 		if (isinstance(q,Required) or isinstance(q,Optional)):
@@ -43,14 +43,14 @@ def variablize_resource(qset):
 			continue
 	return out
 
-class QueryGraph(DataGraph):
+class QueryGraph(GraphSet):
 	def __init__(self):
 		self.resource = None
 		self.filters = {}
 		super(QueryGraph, self).__init__()
 
 	def transform(self, other):
-		out = DataGraph()
+		out = GraphSet()
 		for q in self:
 			resp = other.query(**q._asdict())
 			if resp:

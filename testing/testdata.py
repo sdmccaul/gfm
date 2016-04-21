@@ -2,10 +2,11 @@
 from collections import defaultdict
 import csv
 
-from graphfunction import GraphData
+from graphstatements import Statement
+from graphset import GraphSet
 
-init = set()
+init = GraphSet()
 with open('all_triples.csv','r') as f:
   csv_r = csv.reader(f)
   for row in csv_r:
-    init.add(GraphData(row[0],row[1],row[2]))
+    init.add(Statement(row[0],row[1],row[2]))

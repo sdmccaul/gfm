@@ -1,14 +1,13 @@
-from graphdata import ResourceData
-from graphdatatypes import URI, objectProperty, dataProperty
+from graphstatements import Statement, URI, objectProperty, dataProperty
 
 @dataProperty
-def preferredTitle(res=None, val=None):
-	return ResourceData(res,URI('http://vivoweb.org/ontology/core#preferredTitle'), val)
+def preferredTitle(sbj=None, obj=None):
+	return Statement(sbj,URI('http://vivoweb.org/ontology/core#preferredTitle'), obj)
 
 @objectProperty
-def trainingAtOrganization(res, val):
-	return ResourceData(res,URI('http://vivoweb.org/ontology/core#trainingAtOrganization'), val)
+def trainingAtOrganization(sbj=None, obj=None):
+	return Statement(sbj,URI('http://vivoweb.org/ontology/core#trainingAtOrganization'), obj)
 
 @objectProperty
-def educationalTrainingOf(res, val):
-	return ResourceData(res,URI('http://vivoweb.org/ontology/core#educationalTrainingOf'), val)
+def educationalTrainingOf(sbj=None, obj=None):
+	return Statement(sbj,URI('http://vivoweb.org/ontology/core#educationalTrainingOf'), obj)

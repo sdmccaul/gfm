@@ -1,4 +1,4 @@
-from graphstatments import Statement, URI
+from graphstatements import Statement, URI
 from collections import MutableSet
 
 def graphFilter(graph, key, value): 
@@ -47,7 +47,7 @@ class GraphSet(MutableSet):
 		else:
 			raise TypeError("Expecting Statement object")
 
-	def discard(self, gdata):
+	def discard(self, stmt):
 		if isinstance(stmt, Statement):
 			self.data.discard(stmt)
 		else:
@@ -64,11 +64,11 @@ class GraphSet(MutableSet):
 			raise KeyError
 		return value
 
-	def query(self, **kwargs):
+	def query(self, **stmt):
 		reply = self.data
-		for kwarg in kwargs:
-			if kwargs[kwarg]:
-				reply = graphFilter(reply, kwarg, kwargs[kwarg])
+		for val in stmt:
+			if stmt[val]:
+				reply = graphFilter(reply, val, stmt[val])
 		return reply
 
 	def query_and_remove(self, **kwargs):
