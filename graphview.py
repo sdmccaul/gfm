@@ -54,7 +54,7 @@ class ResourceView(object):
             session.register(rsc)
             return rsc
         else:
-            raise "Resource not found"
+            raise Exception("Resource not found")
 
     @classmethod
     def findAll(cls, session):
@@ -65,7 +65,7 @@ class ResourceView(object):
                 session.register(rsc)
             return rscs
         else:
-            raise "Resources not found"
+            raise Exception("Resources not found")
 
     @classmethod
     def new(cls, session, params):

@@ -1,27 +1,26 @@
 from collections import defaultdict
 
-from graphdata import DataGraph, ResourceData
-from graphattributes import Required
+from graphset import GraphSet
+from graphstatements import Statement, Required, URI
 from graphdb import GraphInterface
-from graphdatatypes import URI
 
 class Session(object):
 
-	def __init__(self, graphInt, initGraph=DataGraph()):
+	def __init__(self, graphInt, initGraph=GraphSet()):
 		self.graphStore = graphInt
 		self.initGraph = initGraph
 		self.views = []
-		self.resources = defaultdict(DataGraph)
+		self.resources = defaultdict(GraphSet)
 
-	def mergeDataGraphs(self, dsetList):
-		return DataGraph([dtm for dset in dsetList
-							for dtm in dset])
+	def mergeDataGraphs(self, gsetList):
+		return GraphSet([stmt for gset in gsetList
+							for stmt in gset])
 
-	def prepDataGraphs(self, dsetList):
-		return DataGraph(
-			[ResourceData(dtm.res.rdf, dtm.att.rdf, dtm.val.rdf)
-				for dset in dsetList
-					for dtm in dset])
+	def prepDataGraphs(self, gsetList):
+		return GraphSet(
+			[Statement(stmt.sbj, stmt.prp, stmt.obj)
+				for gset in gsetList
+					for stmt in gset])
 
 	def register(self, view):
 		if view.uri in self.resources:
@@ -45,11 +44,8 @@ class Session(object):
 		found = self.graphStore.fetch(model.querySet())
 		if found:
 			res = URI(found.keys()[0])
-			self.resources[res].update(
-				model.transform(found[res.rdf]))
-			self.initGraph.update(
-				self.mergeDataGraphs(found.values()
-					))
+			self.resources[res].update(found[res])
+			self.initGraph.update(found[res])
 			return res
 		else:
 			return None
@@ -59,11 +55,8 @@ class Session(object):
 		if found:
 			res = [ URI(f) for f in found.keys() ]
 			for r in res:
-				self.resources[r].update(
-					model.transform(found[r.rdf]))
-			self.initGraph.update(
-				self.mergeDataGraphs(found.values()
-					))
+				self.resources[r].update(found[r])
+				self.initGraph.update(found[r])
 			return res
 		else:
 			return None

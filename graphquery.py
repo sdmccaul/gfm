@@ -7,14 +7,14 @@ def variableGenerator(r):
 		yield "?"+str(v)
 
 def make_subject_variable(q,var):
-	if q.res is None:
-		return q._replace(res=var)
+	if q.sbj is None:
+		return q._replace(sbj=var)
 	else:
 		return q
 
 def make_object_variable(q,var):
-	if q.val is None:
-		return q._replace(val=var)
+	if q.obj is None:
+		return q._replace(obj=var)
 	else:
 		return q
 

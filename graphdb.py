@@ -6,62 +6,61 @@ import re
 from StringIO import StringIO
 
 import graphdatatypes
-from graphdata import ResourceData, DataGraph
-from graphattributes import Required, Optional, Linked
+from graphset import GraphSet
+from graphstatements import Statement, Required, Optional, Linked
 
 
-def write_statement(pattern):
-	return "{0}{1}{2}.".format(
-		pattern.res,pattern.att,pattern.val)
+def write_statement(stmt):
+	return "{0}{1}{2}.".format(stmt.sbj, stmt.prp, stmt.obj)
 
-def optionalize_rule(rule):
-	return "OPTIONAL{{{0}}}".format(rule)
+def optionalize_statement(stmt):
+	return "OPTIONAL{{{0}}}".format(stmt)
 
-def write_optional(pattern):
-	return optionalize_rule(write_statement(pattern))
+def write_optional(stmt):
+	return optionalize_statement(write_statement(stmt))
 
-def jsonToTriples(sbj, stmts):
-	"""pattern out. This is a better implementation
-	of setify()."""
-	triples = []
-	for prd, obj_list in stmts.items():
-		for obj_dict in obj_list:
-			if obj_dict["type"] == "uri":
-				triples.append(
-					tuple([qualifyURI(sbj),
-						qualifyURI(prd),
-						qualifyURI(obj_dict['value'])
-						])
-					)
-			else:
-				datatype = obj_dict.get("datatype")
-				if datatype:
-					val = qualifyData(obj_dict["value"], datatype)
-				else:
-					val = obj_dict["value"]
-				triples.append(
-					tuple([graphdatatypes.URI(sbj),
-						graphdatatypes.URI(prd),
-						val
-						])
-					)
-	return set(triples)
+# def jsonToTriples(sbj, stmts):
+# 	"""pattern out. This is a better implementation
+# 	of setify()."""
+# 	triples = []
+# 	for prd, obj_list in stmts.items():
+# 		for obj_dict in obj_list:
+# 			if obj_dict["type"] == "uri":
+# 				triples.append(
+# 					tuple([qualifyURI(sbj),
+# 						qualifyURI(prd),
+# 						qualifyURI(obj_dict['value'])
+# 						])
+# 					)
+# 			else:
+# 				datatype = obj_dict.get("datatype")
+# 				if datatype:
+# 					val = qualifyData(obj_dict["value"], datatype)
+# 				else:
+# 					val = obj_dict["value"]
+# 				triples.append(
+# 					tuple([graphdatatypes.URI(sbj),
+# 						graphdatatypes.URI(prd),
+# 						val
+# 						])
+# 					)
+# 	return set(triples)
 
 def parseNTriples(queryResults):
-	resultGraphs = defaultdict(DataGraph)
+	resultGraphs = defaultdict(GraphSet)
 	f = StringIO(queryResults)
 	for line in f:
-		res, att, val = re.findall(
+		sbj, prp, obj = re.findall(
 			"<[^>\"]*>\W|\".*\"\^\^<.*>\W\.\n|\".*\"\W\.\n", line)
-		resultGraphs[res.rstrip()].add(ResourceData(
-			res.rstrip(), att.rstrip(), val.rstrip(' .\n')))
+		resultGraphs[sbj.rstrip()].add(Statement(
+			sbj.rstrip(), prp.rstrip(), obj.rstrip(' .\n')))
 	return resultGraphs
 
-def parseSubGraphs(queryResults):
-	resultGraphs = dict()
-	for sbj in queryResults:
-		resultGraphs[sbj] = jsonToTriples(sbj, queryResults[sbj])
-	return resultGraphs
+# def parseSubGraphs(queryResults):
+# 	resultGraphs = dict()
+# 	for sbj in queryResults:
+# 		resultGraphs[sbj] = jsonToTriples(sbj, queryResults[sbj])
+# 	return resultGraphs
 
 defaultGraph = "<http://vitro.mannlib.cornell.edu/default/vitro-kb-2>"
 

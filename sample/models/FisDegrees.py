@@ -1,5 +1,6 @@
 from graphview import ResourceView
-from graphattributes import Edge, Required, Optional, Linked
+from graphstatements import Required, Optional, Linked
+from graphedges import Edge
 from properties import blocal, rdfs, rdf, foaf, vivo
 
 class FisDegrees(ResourceView):
