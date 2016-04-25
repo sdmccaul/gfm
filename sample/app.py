@@ -22,11 +22,12 @@ def not_found(error):
 @app.route('/rabdata/vocabmgmt/term/<rabid>', methods=['GET'])
 def show_term(rabid):
 	sh = Session(gi)
-	term = VocabTerm.find("http://vivo.brown.edu/individual/" + rabid, sh)
+	term = VocabTerm.find(
+		"<http://vivo.brown.edu/individual/{0}>".format(rabid), sh)
 	neighborProps = [
-		"http://www.w3.org/2004/02/skos/core#broader",
-		"http://www.w3.org/2004/02/skos/core#narrower",
-		"http://www.w3.org/2004/02/skos/core#related"
+		"<http://www.w3.org/2004/02/skos/core#broader>",
+		"<http://www.w3.org/2004/02/skos/core#narrower>",
+		"<http://www.w3.org/2004/02/skos/core#related>"
 	]
 	neighbors = {}
 	neighborURIs = []
@@ -36,7 +37,7 @@ def show_term(rabid):
 		for uri in neighborURIs:
 			nbor = RDFResource.find(uri, sh).to_dict()
 			neighbors[nbor['@id']] = {
-					'display': nbor['http://www.w3.org/2000/01/rdf-schema#label'][0]
+					'display': nbor['<http://www.w3.org/2000/01/rdf-schema#label>'][0]
 				}
 	if not term:
 		abort(404)
