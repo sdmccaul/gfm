@@ -69,11 +69,10 @@ def index():
 @app.route('/rabdata/fisfeed/faculty/', methods=['POST'])
 def create():
 	try:
-		new = FisFaculty.create(resp.body)
+		new = FisFaculty.create(json.loads(resp.body))
 	except:
 		return 400
-	new.save()
-	return 201
+	return response(code=201, body=new)
 
 @app.route('/rabdata/fisfeed/faculty/<rabid>', methods=['GET'])
 def retrieve(rabid):
@@ -82,7 +81,7 @@ def retrieve(rabid):
 	except:
 		return 404
 	data = json.dumps(fisfac)
-	return data
+	return response(code=200, body=data)
 
 @app.route('/rabdata/fisfeed/faculty/<rabid>', methods=['PUT'])
 def update(rabid):
@@ -91,11 +90,11 @@ def update(rabid):
 	except:
 		return 404
 	if fisfac.ETag == req.headers["If-Match"]:
-		resp = fisfac.overwrite(req.body)
-		if resp == 200:
-			return 200
-		else:
-			return resp
+		try:
+			fisfac.overwrite(json.loads(req.body))
+		except:
+			return 400
+		return response(code=201, body=fisfac)
 	else:
 		return 409
 
@@ -106,8 +105,11 @@ def destroy(rabid):
 		fisfac = FisFaculty.find(rabid=rabid)
 	except:
 		return 404
-	if fisfac.ETag == req.ETag:
-		fisfac.remove()
+	if fisfac.ETag == req.headers["If-Match"]:
+		try:
+			fisfac.remove()
+		except:
+			return 403
 		return 204
 	else:
 		return 409
