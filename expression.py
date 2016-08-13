@@ -1,4 +1,3 @@
-import rdflib
 import domains
 
 class Expression(object):
@@ -20,11 +19,41 @@ class Collection(object):
 		self.graph = graph
 		self.prefix = prefix
 
-	def json_to_dict(self, jdata):
-		data = json.dumps(jdata)
-		args = dict( (self.schema.names[key].uri, self.schema.names[key].toPython(value)) for key, value in data.items())
-		inst = Resource(**args)
-		return inst
+	def map_data_to_res(self, data):
+		mapped = dict()
+		for name, vals in data:
+			try:
+				uri = self.schema[name].uri
+			except KeyError:
+				raise Exception("Unrecognized field")
+			if not isinstance(vals, list):
+				raise Exception("Attribute values must be list")
+			mapped[uri] = vals
+		return mapped
+		# mapped = dict( (self.mappings['uris'][key], value) for key, value in data.items())
+		# return mapped
+
+	def map_triples_to_res(triples):
+		out = defaultdict(list)
+		subject = set()
+		for triple in triples:
+			try:
+				subject.add(triple[0].geturl())
+			except AttributeError:
+				raise Exception("Expecting urlparse url")
+			try:
+				predicate = triple[1].geturl()
+			except AttributeError:
+				raise Exception("Expecting urparse url")
+			if predicate in self.schema:
+				out[predicate].append(triple[2])
+			else:
+				raise Exception("Unrecognized field")
+		if len(subject) > 1:
+			raise Exception("Too many subjects in graph!")
+		else:
+			out["@uri"]=subject
+			return out
 
 	def register_endpoint(endpoint):
 		self.endpoint = endpoint
@@ -34,9 +63,9 @@ class Collection(object):
 		return res
 
 	def create(self, data=None):
-		uri = self.newURI(self.prefix)
-		valid = self.schema.validateDict(data)
-		res = Resource(collection=self, uri=uri, data=valid)
+		uri = self.new_uri(self.prefix)
+		mapped = self.map_data_to_res(data)
+		res = Resource(collection=self, uri=uri, data=mapped)
 		resp = self.endpoint.insert(self.graph, res.toTriples())
 		if resp:
 			return res
@@ -45,11 +74,11 @@ class Collection(object):
 		pass
 
 	def find(self, rabid):
-		uri = self.parseRabid(rabid)
+		uri = self.parse_rabid(rabid)
 		res = Resource(uri=uri, collection=self)
 		resp = self.endpoint.construct(res.toQuery())
 		if resp == 200:
-			results = self.triplesToDict(resp.body)
+			results = self.map_triples_to_res(resp.body)
 			return Resource(
 					collection=self, uri=results['uri'], data=results['data'])
 
@@ -65,58 +94,63 @@ class Collection(object):
 		resp = self.endpoint.delete(self.graph, remove)
 		return resp
 
-	def triplesToDicts(triples):
-		out = []
-		for tset in triples:
-			data = defaultdict(list)
-			uriSet = set()
-			for triple in tset:
-				uriSet.add(triple[0])
-				data[triple[1]].append(triple[2])
-			if len(uriSet) > 1:
-				raise ValueError("too many uris!")
-			out.append({'uri': uriSet[0], 'data': data})
-		return out
 
 #class Subject?
 class Resource(object):
-	def __init__(self, collection, uri, data=None):
+	def __init__(self, collection, uri=None, data=None):
 		self.collection = collection
 		self.schema = collection.schema
 		if uri:
 			self.uri = uri
 		else:
 			try:
-				uri = data['uri']
+				uri = data['@uri']
 			except KeyError:
-				raise Exception("Resoource requires URI")
+				raise Exception("Resource requires URI")
 		if data:
 			self.update(data)
 
-	def __setattr__(self, name, value):
-		domain = self.schema[name]
-		setattr(self, name, domain(value))
+	def __getitem__(self, name):
+		return attribute_to_primitive(getattr(name))
 
-	def toTriples(self):
+	def __setitem__(self, name, value):
+		predicate = self.schema[name]
+		setattr(self, name, predicate(value))
+
+	def attribute_to_primitive(self, value):
+		if isinstance(value, urlparse.ParseResult):
+			return value.geturl()
+		elif isinstance(value, datetime.date):
+			return value.isoformat()
+		else:
+			return value
+
+	def to_triples(self):
 		return [(self.uri, k, v) for k,v in self.__dict__.items() ]
 
-	def toJSON(self):
+	def to_dict(self):
 		pass
 
-	def toQuery(self):
-		required = [(self.uri, k, v) for k,v in self.__dict__.items() if k.required ]
-		optional = [(self.uri, k, v) for k,v in self.__dict__.items() if k.optional ]
+	def to_query(self):
+		required = [(self.uri, k, v) for k,v in self.__dict__.items() if k in self.schema.required ]
+		optional = [(self.uri, k, v) for k,v in self.__dict__.items() if k in self.schema.optional ]
 		return {'required': required, 'optional': optional}
 
 	def overwrite(self, data):
-		valid = self.collection.json_to_dict(data)
-		old = self.toTriples()
-		self.update(valid)
-		new = self.toTriples()
-		resp = self.collection.add_and_remove(old, new)
+		mapped = self.collection.map_data_to_res(data)
+		revert = self.__dict__.items()
+		old = self.to_triples()
+		try:
+			self.update(mapped)
+		except:
+			self.update(revert)
+			raise ValueError("bad update: ", data)
+		new = self.to_triples()
+		resp = self.collection.add_and_remove(self, new, old)
 		if resp:
 			return True
 		else:
+			self.update(revert)
 			raise ValueError("Overwrite rejected")
 
 	def update(self, data):
@@ -124,50 +158,22 @@ class Resource(object):
 			self[k] = v
 
 	def save(self):
-		resp = self.collection.add(self.toTriples())
+		resp = self.collection.add(self.to_triples())
 		return resp
 
 	def remove(self):
-		resp = self.collection.remove(self.toTriples())
+		resp = self.collection.remove(self.to_triples())
 
 class Schema(object):
-	def __init__(self, attvals):
-		self.labels = { attval.label: attval for attval in attvals}
-		self.uris = { attval.uri: attval for attval in attvals}
+	def __init__(self, predicates):
+		self.fields = dict()
+		self.fields.update({ predicate.uri: predicate for predicate in predicates })
+		self.fields.update({ predicate.alias: predicate for predicate in predicates })
+		self.required = [ predicate.uri for predicate in predicates if predicate.required ]
+		self.optional = [ predicate.uri for predicate in predicates if predicate.optional ]
 
-	def convertNames(namesDict):
-		out = dict()
-		for name, vals in namesDict:
-			try:
-				predicate = self.labels[name]
-			except KeyError:
-				raise Exception("Unrecognized field")
-			if not isinstance(vals, list):
-				raise Exception("Attribute values must be list")
-			out[predicate] = vals
-		return out
-
-	def convertTriples(triples):
-		out = defaultdict(list)
-		subject = set()
-		for triple in triples:
-			try:
-				subject.add(triple[0].geturl())
-			except AttributeError:
-				raise Exception("Expecting urlparse url")
-			try:
-				predicate = triple[1].geturl()
-			except AttributeError:
-				raise Exception("Expecting urparse url")
-			if predicate in self.uris:
-				out[predicate].append(triple[2])
-			else:
-				raise Exception("Unrecognized field")
-		if len(subject) > 1:
-			raise Exception("Too many subjects in graph!")
-		else:
-			out["uri"]=subject
-			return out
+	def __getitem__(self, key):
+		return self.fields[key]
 
 class Attribute(object):
 	def __init__(self, alias, predicate, required=True,
@@ -180,33 +186,26 @@ class Attribute(object):
 		self.unique = unique
 		self.values = values
 
-	def check(self, inVals):
-		if self.required and len(inVals) == 0:
+	def __call__(self, vals=None):
+		if vals is None:
+			vals = self.values
+		if self.required and len(vals) == 0:
 			raise ValueError("Value is required")
-		if self.unique and len(inVals) > 1:
+		if self.unique and len(vals) > 1:
 			raise ValueError("Only one value permitted")
-		self.predicate.validate(inVals)
+		if self.optional and len(vals) == 0:
+			return list()
+		self.predicate.validate(vals)
 
 
-class Predicate(object):	
-	def __init__(self, uri, domain):
-		self.uri = uri
-		self.domain = domain
-
-	def toPython(self, vals):
-		if type(vals) != list:
-			raise ValueError("Expected list")
-		return [ self.domain(val) for val in vals ]
 
 
-rdfLabel = Predicate(
-				uri='http://www.w3.org/2000/01/rdf-schema#label',
-				domain=domains.xsdString)
 
-fisUpdated = Predicate(
-				uri='http://vivo.brown.edu/ontology/vivo-brown/fisUpdated',
-				domain=domains.xsdDate
-	)
+rdfLabel = domains.StringProperty(
+				uri='http://www.w3.org/2000/01/rdf-schema#label')
+
+fisUpdated = domains.DateProperty(
+				uri='http://vivo.brown.edu/ontology/vivo-brown/fisUpdated')
 
 
 # class FisFaculty(object):
@@ -297,3 +296,27 @@ fisUpdated = Predicate(
 #     	'title': Statement({'verb': vivo.preferredTitle
 #     				'required': False})
 # 	}
+
+class FisFaculty(Resource):
+
+	def __init__(self, uri, schema):
+	 	self.uri = uri
+	 	self.shortId = list()
+	 	self.type = 
+
+	def builtin_to_date(self, value):
+		if isinstance(value, datetime.date):
+			return value
+		else:
+			try:
+				return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ').date()
+			except:	
+				raise ValueError("Bad date: ", value)
+
+	def date_to_builtin(self, value):
+		try:
+			return value.isoformat()
+		except AttributeError:
+			return value.decode("UTF-8")
+		except:
+			raise ValueError
