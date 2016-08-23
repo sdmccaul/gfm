@@ -1,86 +1,52 @@
 import domains
 
-class Expression(object):
-
-	def __init__(self, schema):
-		self.schema = schema
-
-
-	def mint_new_uri(self):
-		pass
-
-	def dictionaryToObject(dikt):
-		pass
-
 class Collection(object):
-	def __init__(self, name, schema, graph, prefix):
+	def __init__(self, name, schema, named_graph, namespace, prefix):
 		self.name = name
 		self.schema = schema
-		self.graph = graph
+		self.named_graph = named_graph
+		self.namespace = namespace
 		self.prefix = prefix
 
-	def map_data_to_res(self, data):
-		mapped = dict()
-		for name, vals in data:
-			try:
-				uri = self.schema[name].uri
-			except KeyError:
-				raise Exception("Unrecognized field")
-			if not isinstance(vals, list):
-				raise Exception("Attribute values must be list")
-			mapped[uri] = vals
-		return mapped
-		# mapped = dict( (self.mappings['uris'][key], value) for key, value in data.items())
-		# return mapped
-
-	def map_triples_to_res(triples):
+	def _triples_to_dict(triples):
 		out = defaultdict(list)
-		subject = set()
 		for triple in triples:
-			try:
-				subject.add(triple[0].geturl())
-			except AttributeError:
-				raise Exception("Expecting urlparse url")
-			try:
-				predicate = triple[1].geturl()
-			except AttributeError:
-				raise Exception("Expecting urparse url")
-			if predicate in self.schema:
-				out[predicate].append(triple[2])
-			else:
-				raise Exception("Unrecognized field")
-		if len(subject) > 1:
-			raise Exception("Too many subjects in graph!")
-		else:
-			out["@uri"]=subject
-			return out
+			out[triple[1]].append(triple[2])
+		return out
 
 	def register_endpoint(endpoint):
 		self.endpoint = endpoint
 
-	def mint_resource(self, uri, data=None):
-		res = Resource(uri=uri, collection=self, data=data)
-		return res
+	def mint_new_uri():
+		data_hash = self.resource_hash(self.prefix)
+		return namespace_uri(data_hash)
+
+	def namespace_uri(suffix):
+		return os.path.join(self.namespace, suffix)
 
 	def create(self, data=None):
-		uri = self.new_uri(self.prefix)
-		mapped = self.map_data_to_res(data)
-		res = Resource(collection=self, uri=uri, data=mapped)
-		resp = self.endpoint.insert(self.graph, res.toTriples())
+		uri = self.mint_new_uri()
+		res = Resource(collection=self, uri=uri, data=data)
+		resp = res.save()
 		if resp:
 			return res
 
 	def search(self, **params):
-		pass
+		res = Resource(collection=self, data=params)
+		resp = self.endpoint.construct(res.to_query())
+		if resp == 200:
+			for tripleset in resp:
+
 
 	def find(self, rabid):
-		uri = self.parse_rabid(rabid)
+		uri = self.namespace_uri(rabid)
 		res = Resource(uri=uri, collection=self)
-		resp = self.endpoint.construct(res.toQuery())
+		resp = self.endpoint.construct(res.to_query())
 		if resp == 200:
-			results = self.map_triples_to_res(resp.body)
-			return Resource(
-					collection=self, uri=results['uri'], data=results['data'])
+			assert(uri == resp.body['@uri'])
+			data = self._triples_to_dict(resp.body['triples'])
+			res.update(data)
+			return res
 
 	def add_and_remove(self, add, remove):
 		resp = self.endpoint.insert_and_delete(self.graph, add, remove)
@@ -94,54 +60,53 @@ class Collection(object):
 		resp = self.endpoint.delete(self.graph, remove)
 		return resp
 
-
-#class Subject?
 class Resource(object):
 	def __init__(self, collection, uri=None, data=None):
 		self.collection = collection
-		self.schema = collection.schema
+		self.graph_data = dict()
+		self.optional = collection.schema.optional
+		self.required = collection.schema.required
+		self.unique = collection.schema.unique
+		self.aliases = collection.schema.aliases
+		self.uri_aliases = collection.schema.uri_aliases
+		self.validators = self.schema.validators
 		if uri:
 			self.uri = uri
+		elif data:
+			self.uri = data.get('@uri',None)
 		else:
-			try:
-				uri = data['@uri']
-			except KeyError:
-				raise Exception("Resource requires URI")
+			self.uri = None
 		if data:
 			self.update(data)
 
-	def __getitem__(self, name):
-		return attribute_to_primitive(getattr(name))
-
-	def __setitem__(self, name, value):
-		predicate = self.schema[name]
-		setattr(self, name, predicate(value))
-
-	def attribute_to_primitive(self, value):
-		if isinstance(value, urlparse.ParseResult):
-			return value.geturl()
-		elif isinstance(value, datetime.date):
-			return value.isoformat()
-		else:
-			return value
-
 	def to_triples(self):
-		return [(self.uri, k, v) for k,v in self.__dict__.items() ]
+		return [(self.uri, k, v) for val in v
+					for k,v in self.graph_data.items() ]
 
-	def to_dict(self):
-		pass
+	def to_dict(self, alias=True):
+		if alias:
+			out = { self.aliases[k]: v for k,v in self.graph_data.items() }
+		else:
+			out = self.graph_data
+		out['@uri'] = self.uri
+		return out
 
 	def to_query(self):
-		required = [(self.uri, k, v) for k,v in self.__dict__.items() if k in self.schema.required ]
-		optional = [(self.uri, k, v) for k,v in self.__dict__.items() if k in self.schema.optional ]
+		# Needs val conversion to None
+		# where appropriate
+		required = [(self.uri, k, val) for val in v
+						for k,v in self.graph.items()
+							if k in self.required ]
+		optional = [(self.uri, k, val) for val in v
+						for k,v in self.graph.items()
+							if k in self.optional ]
 		return {'required': required, 'optional': optional}
 
 	def overwrite(self, data):
-		mapped = self.collection.map_data_to_res(data)
-		revert = self.__dict__.items()
+		revert = self.graph.copy()
 		old = self.to_triples()
 		try:
-			self.update(mapped)
+			self.update(data)
 		except:
 			self.update(revert)
 			raise ValueError("bad update: ", data)
@@ -154,8 +119,10 @@ class Resource(object):
 			raise ValueError("Overwrite rejected")
 
 	def update(self, data):
-		for k, v in data.items():
-			self[k] = v
+		verified = self.verify_attribute_keys(data)
+		validatts = self.validate_attributes(data)
+		validdata = self.validate_data(validatts)
+		self.graph.update(validdata)
 
 	def save(self):
 		resp = self.collection.add(self.to_triples())
@@ -164,16 +131,20 @@ class Resource(object):
 	def remove(self):
 		resp = self.collection.remove(self.to_triples())
 
+	def verify_attribute_keys(data):
+		return [ self.aliases[k] for ]
+
 class Schema(object):
 	def __init__(self, predicates):
-		self.fields = dict()
-		self.fields.update({ predicate.uri: predicate for predicate in predicates })
-		self.fields.update({ predicate.alias: predicate for predicate in predicates })
+		self.aliases = { predicate.uri: predicate for predicate in predicates })
+		self.uri_aliases = { predicate.alias: predicate for predicate in predicates }
 		self.required = [ predicate.uri for predicate in predicates if predicate.required ]
 		self.optional = [ predicate.uri for predicate in predicates if predicate.optional ]
 
-	def __getitem__(self, key):
+
+	def validate_date(self, key):
 		return self.fields[key]
+
 
 class Attribute(object):
 	def __init__(self, alias, predicate, required=True,
