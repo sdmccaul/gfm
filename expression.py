@@ -34,8 +34,8 @@ class Collection(object):
 	def search(self, **params):
 		res = Resource(collection=self, data=params)
 		resp = self.endpoint.construct(res.to_query())
-		if resp == 200:
-			for tripleset in resp:
+		# if resp == 200:
+		# 	for tripleset in resp:
 
 
 	def find(self, rabid):
@@ -63,13 +63,10 @@ class Collection(object):
 class Resource(object):
 	def __init__(self, collection, uri=None, data=None):
 		self.collection = collection
-		self.graph_data = dict()
-		self.optional = collection.schema.optional
-		self.required = collection.schema.required
-		self.unique = collection.schema.unique
+		self.data = dict()
 		self.aliases = collection.schema.aliases
-		self.uri_aliases = collection.schema.uri_aliases
-		self.validators = self.schema.validators
+		self.uris = collection.schema.uris
+		self.validators = collection.schema.validators
 		if uri:
 			self.uri = uri
 		elif data:
@@ -85,9 +82,9 @@ class Resource(object):
 
 	def to_dict(self, alias=True):
 		if alias:
-			out = { self.aliases[k]: v for k,v in self.graph_data.items() }
+			out = { self.uris[k]: v for k,v in self.data.items() }
 		else:
-			out = self.graph_data
+			out = self.data
 		out['@uri'] = self.uri
 		return out
 
@@ -118,11 +115,12 @@ class Resource(object):
 			self.update(revert)
 			raise ValueError("Overwrite rejected")
 
-	def update(self, data):
-		verified = self.verify_attribute_keys(data)
-		validatts = self.validate_attributes(data)
-		validdata = self.validate_data(validatts)
-		self.graph.update(validdata)
+	def update(self, data, aliased=True, validate=True):
+		if aliased:
+			data = self.unalias_attributes(data)
+		if validate:
+			data = self.validate(data)
+		self.data.update(data)
 
 	def save(self):
 		resp = self.collection.add(self.to_triples())
@@ -131,163 +129,58 @@ class Resource(object):
 	def remove(self):
 		resp = self.collection.remove(self.to_triples())
 
-	def verify_attribute_keys(data):
-		return [ self.aliases[k] for ]
+	def unalias_attributes(data):
+		return { self.aliases[k]: v for k,v in data.items() }
+
+	def validate(data):
+		valid_atts = validate_attributes(data)
+		valid_data = validate_data(valid_atts)
+		return valid_data
+
+	def validate_attributes(data):
+		no_other_attrs = { k: v for k,v in data.items() if k in self.uris }
+		all_attrs_present = { k: list() for k in self.uris if k not in no_other_attrs }
+		return all_attrs_present
+
+	def validate_data(data):
+		out = {}
+		for k, v in data():
+			validators = self.validators[k]
+			filtered = v
+			for validate in validators:
+				filtered = validate(filtered)
+			out[uri] = filtered
+		return out
 
 class Schema(object):
-	def __init__(self, predicates):
-		self.aliases = { predicate.uri: predicate for predicate in predicates })
-		self.uri_aliases = { predicate.alias: predicate for predicate in predicates }
-		self.required = [ predicate.uri for predicate in predicates if predicate.required ]
-		self.optional = [ predicate.uri for predicate in predicates if predicate.optional ]
-
-
-	def validate_date(self, key):
-		return self.fields[key]
-
+	def __init__(self, attrs):
+		self.aliases = { attr.alias: attr.uri for attr in attrs }
+		self.uris = { attr.uri: attr.alias for attr in attrs }
+		self.validators = { attr.uri: attr.validators for attr in attrs }
 
 class Attribute(object):
 	def __init__(self, alias, predicate, required=True,
-					optional=False, unique=False, values=list()):
-		self.predicate = predicate
+					unique=False, values=list()):
 		self.uri = predicate.uri
-		self.label = alias
-		self.required = required
-		self.optional = optional
-		self.unique = unique
-		self.values = values
+		self.alias = alias
+		self.defaults = values
+		self.validators = [predicate.validator]
+		if values:
+			self.validators.insert(self._validate_defaults,0)
+		if unique:
+			self.validators.insert(self._validate_unique,0)
+		if required:
+			self.validators.insert(self._validate_required,0)
 
-	def __call__(self, vals=None):
-		if vals is None:
-			vals = self.values
-		if self.required and len(vals) == 0:
+	def _validate_required(self, values):
+		if len(values) == 0:
 			raise ValueError("Value is required")
-		if self.unique and len(vals) > 1:
+		return values
+
+	def _validate_unique(self, values):
+		if len(vals) == 0:
 			raise ValueError("Only one value permitted")
-		if self.optional and len(vals) == 0:
-			return list()
-		self.predicate.validate(vals)
+		return values
 
-
-
-
-
-rdfLabel = domains.StringProperty(
-				uri='http://www.w3.org/2000/01/rdf-schema#label')
-
-fisUpdated = domains.DateProperty(
-				uri='http://vivo.brown.edu/ontology/vivo-brown/fisUpdated')
-
-
-# class FisFaculty(object):
-# 	expression = 'FisFaculty'
-# 	schema = {
-# 			'type': 'type: URI',
-# 			'shortId': 'shortId: string',
-# 			'label': 'label: string',
-# 			'first': 'first: string',
-# 			'last': 'last: string',
-# 			'title': 'title: string'}
-
-# 	def __init__(self, dataDict=None):
-# 		if dataDict:
-# 			self.update(dataDict)
-
-# 	def update(self, updDict):
-# 		for k, v in updDict.items():
-# 			if k in self.schema.keys():
-# 				setattr(self, k, v)
-
-# 	def query(self, queryDict):
-# 		pass
-
-# 	def create(self, dataDict):
-# 		return Resource(self.schema, dataDict)
-
-# 	def find(self, rabid=rabid):
-# 		query = Query(self.schema(rabid=rabid))
-# 		resp = self.db.construct(query)
-# 		if resp:
-# 			found = self.create(resp)
-
-# 	def save(self):
-# 		pass
-
-# 	def delete(self):
-# 		pass
-
-# 	def mint_uri(self):
-# 		pass
-
-
-# fisFacultySchema = Schema('FisFaculty',
-# 							{'type': 'type: URI',
-# 							'shortId': 'shortId: string',
-# 							'label': 'label: string',
-# 							'first': 'first: string',
-# 							'last': 'last: string',
-# 							'title': 'title: string'})
-
-# class Stub(object):
-
-# 	name_mappings =	{
-# 					'type': 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type',
-# 					'shortId': 'http://vivo.brown.edu/ontology/vivo-brown/shortId',
-# 					'label': 'http://www.w3.org/2000/01/rdf-schema#label'
-# 					}
-
-# 	validators = {
-# 					'http://www.w3.org/1999/02/22-rdf-syntax-ns#type': {'range': 'object'},
-# 					'http://vivo.brown.edu/ontology/vivo-brown/shortId':
-# 					'http://www.w3.org/2000/01/rdf-schema#label':
-# 				}
-
-# 	def __init__(self):
-
-# class FisFaculty(Schema):
-
-# 	attributes = {
-# 		'type': Statement(
-# 					{
-# 					'verb': rdf.RdfType,
-# 					'values': [
-# 						'http://vivoweb.org/ontology/core#FacultyMember',
-# 						'http://vivo.brown.edu/ontology/vivo-brown/BrownThing'
-# 						],
-# 					}),
-# 		'shortId': Statement({'verb': blocal.ShortId}),
-# 		'label': Statement({'verb': rdfs.Label),
-#     	'first': Statement(
-#     				{'verb': foaf.FirstName,
-#     				'required': False,
-#     				'unique': True}),
-#     	'last': Statement({'verb': foaf.LastName,
-#     				'required': False,
-#     				'unique': True}),
-#     	'title': Statement({'verb': vivo.preferredTitle
-#     				'required': False})
-# 	}
-
-class FisFaculty(Resource):
-
-	def __init__(self, uri, schema):
-	 	self.uri = uri
-	 	self.shortId = list()
-	 	self.type = 
-
-	def builtin_to_date(self, value):
-		if isinstance(value, datetime.date):
-			return value
-		else:
-			try:
-				return datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ').date()
-			except:	
-				raise ValueError("Bad date: ", value)
-
-	def date_to_builtin(self, value):
-		try:
-			return value.isoformat()
-		except AttributeError:
-			return value.decode("UTF-8")
-		except:
-			raise ValueError
+	def _validate_defaults(self, values):
+		return self.defaults
