@@ -1,4 +1,5 @@
-import domains
+import os
+import uuid
 
 class Collection(object):
 	def __init__(self, name, schema, named_graph, namespace, prefix):
@@ -17,19 +18,21 @@ class Collection(object):
 	def register_endpoint(endpoint):
 		self.endpoint = endpoint
 
-	def mint_new_uri():
+	def mint_new_uri(self):
+		#does a prefix for resource hash even make sense?
 		data_hash = self.resource_hash(self.prefix)
-		return namespace_uri(data_hash)
+		return self.namespace_uri(data_hash)
 
-	def namespace_uri(suffix):
+	def namespace_uri(self, suffix):
 		return os.path.join(self.namespace, suffix)
 
 	def create(self, data=None):
 		uri = self.mint_new_uri()
 		res = Resource(collection=self, uri=uri, data=data)
-		resp = res.save()
-		if resp:
-			return res
+		# resp = res.save()
+		# if resp:
+		# 	return res
+		return res
 
 	def search(self, **params):
 		res = Resource(collection=self, data=params)
@@ -37,6 +40,8 @@ class Collection(object):
 		# if resp == 200:
 		# 	for tripleset in resp:
 
+	def resource_hash(self, prefix):
+		return uuid.uuid4().hex
 
 	def find(self, rabid):
 		uri = self.namespace_uri(rabid)
@@ -129,28 +134,31 @@ class Resource(object):
 	def remove(self):
 		resp = self.collection.remove(self.to_triples())
 
-	def unalias_attributes(data):
+	def unalias_attributes(self, data):
 		return { self.aliases[k]: v for k,v in data.items() }
 
-	def validate(data):
-		valid_atts = validate_attributes(data)
-		valid_data = validate_data(valid_atts)
+	def validate(self, data):
+		valid_atts = self.validate_attributes(data)
+		valid_data = self.validate_data(valid_atts)
 		return valid_data
 
-	def validate_attributes(data):
-		no_other_attrs = { k: v for k,v in data.items() if k in self.uris }
-		all_attrs_present = { k: list() for k in self.uris if k not in no_other_attrs }
-		return all_attrs_present
-
-	def validate_data(data):
-		out = {}
-		for k, v in data():
-			validators = self.validators[k]
+	def validate_attributes(self, data):
+		data = { k: v for k,v in data.items() if k in self.uris }
+		data.update({ k: list() for k in self.uris if k not in data })
+		for k, v in data.items():
+			validators = self.validators[k]['attributes']
 			filtered = v
-			for validate in validators:
-				filtered = validate(filtered)
-			out[uri] = filtered
-		return out
+			for validator in validators:
+				filtered = validator(filtered)
+			data[k] = filtered
+		return data
+
+	def validate_data(self, data):
+		for k, v in data.items():
+			validator = self.validators[k]['data']
+			filtered = [validator(d) for d in v] 
+			data[k] = filtered
+		return data
 
 class Schema(object):
 	def __init__(self, attrs):
@@ -164,13 +172,19 @@ class Attribute(object):
 		self.uri = predicate.uri
 		self.alias = alias
 		self.defaults = values
-		self.validators = [predicate.validator]
+		self.validators = { 'attributes': [self._validate_list],
+							'data': predicate.validator}
 		if values:
-			self.validators.insert(self._validate_defaults,0)
-		if unique:
-			self.validators.insert(self._validate_unique,0)
+			self.validators['attributes'].append(self._validate_defaults)
 		if required:
-			self.validators.insert(self._validate_required,0)
+			self.validators['attributes'].append(self._validate_required)
+		if unique:
+			self.validators['attributes'].append(self._validate_unique)
+			
+	def _validate_list(self, values):
+		if not isinstance(values, list):
+			raise TypeError('Data must be in list format')
+		return values
 
 	def _validate_required(self, values):
 		if len(values) == 0:
@@ -178,7 +192,7 @@ class Attribute(object):
 		return values
 
 	def _validate_unique(self, values):
-		if len(vals) == 0:
+		if len(values) == 0:
 			raise ValueError("Only one value permitted")
 		return values
 
