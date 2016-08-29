@@ -67,11 +67,9 @@ class Collection(object):
 
 class Resource(object):
 	def __init__(self, collection, uri=None, data=None):
-		self.collection = collection
 		self.data = dict()
-		self.aliases = collection.schema.aliases
-		self.uris = collection.schema.uris
-		self.validators = collection.schema.validators
+		self.collection = collection
+		self.schema = collection.schema
 		if uri:
 			self.uri = uri
 		elif data:
@@ -82,12 +80,12 @@ class Resource(object):
 			self.update(data)
 
 	def to_triples(self):
-		return [(self.uri, k, v) for val in v
-					for k,v in self.graph_data.items() ]
+		return [(self.uri, k, val) for k,v in self.data.items()
+					for val in v ]
 
 	def to_dict(self, alias=True):
 		if alias:
-			out = { self.uris[k]: v for k,v in self.data.items() }
+			out = self.schema.alias_data(self.data)
 		else:
 			out = self.data
 		out['@uri'] = self.uri
@@ -96,16 +94,16 @@ class Resource(object):
 	def to_query(self):
 		# Needs val conversion to None
 		# where appropriate
-		required = [(self.uri, k, val) for val in v
-						for k,v in self.graph.items()
-							if k in self.required ]
-		optional = [(self.uri, k, val) for val in v
-						for k,v in self.graph.items()
-							if k in self.optional ]
+		required = [(self.uri, k, val) for k,v in self.data.items()
+						for val in v
+							if k in self.schema.required ]
+		optional = [(self.uri, k, val) for k,v in self.data.items()
+						for val in v
+							if k in self.schema.optional ]
 		return {'required': required, 'optional': optional}
 
 	def overwrite(self, data):
-		revert = self.graph.copy()
+		revert = self.data.copy()
 		old = self.to_triples()
 		try:
 			self.update(data)
@@ -120,11 +118,11 @@ class Resource(object):
 			self.update(revert)
 			raise ValueError("Overwrite rejected")
 
-	def update(self, data, aliased=True, validate=True):
+	def update(self, data, aliased=False, validate=False):
 		if aliased:
-			data = self.unalias_attributes(data)
+			data = self.schema.unalias_data(data)
 		if validate:
-			data = self.validate(data)
+			data = self.schema.validate(data)
 		self.data.update(data)
 
 	def save(self):
@@ -134,31 +132,17 @@ class Resource(object):
 	def remove(self):
 		resp = self.collection.remove(self.to_triples())
 
-	def unalias_attributes(self, data):
-		return { self.aliases[k]: v for k,v in data.items() }
 
-	def validate(self, data):
-		valid_atts = self.validate_attributes(data)
-		valid_data = self.validate_data(valid_atts)
-		return valid_data
+def rename_dictionary_keys(newKeyMap, dct):
+	return { newKeyMap[k]: v for k,v in dct.items() }
 
-	def validate_attributes(self, data):
-		data = { k: v for k,v in data.items() if k in self.uris }
-		data.update({ k: list() for k in self.uris if k not in data })
-		for k, v in data.items():
-			validators = self.validators[k]['attributes']
-			filtered = v
-			for validator in validators:
-				filtered = validator(filtered)
-			data[k] = filtered
-		return data
+def filter_unrecognized_keys(keyList, dct):
+	return { k: v for k,v in dct.items() if k in keyList }
 
-	def validate_data(self, data):
-		for k, v in data.items():
-			validator = self.validators[k]['data']
-			filtered = [validator(d) for d in v] 
-			data[k] = filtered
-		return data
+def add_missing_keys(keyList, dct):
+	out = dct.copy()
+	out.update({ k: list() for k in keyList if k not in dct })
+	return out
 
 class Schema(object):
 	def __init__(self, attrs):
@@ -167,8 +151,47 @@ class Schema(object):
 		self.uris = { attr.uri: attr.alias for attr in attrs }
 		self.attr_validators = { attr.uri: attr.validators for attr in attrs }
 		self.data_validators = { attr.uri: attr.predicate.validator for attr in attrs }
-		self.required_attrs = [ attr.uri for attr in attrs if attr.required ]
-		self.optional_attrs = [ attr.uri for attr in attrs if not attr.required ]
+		self.presets = { attr.uri: attr.presets for attr in attrs if hasattr(attr,'presets') }
+		self.required = [ attr.uri for attr in attrs if attr.required ]
+		self.optional = [ attr.uri for attr in attrs if not attr.required ]
+
+	def unalias_data(self, data):
+		return rename_dictionary_keys(self.aliases, data)
+
+	def alias_data(self, data):
+		return rename_dictionary_keys(self.uris, data)
+
+	def assign_preset_values(self, data):
+		data.update(self.presets)
+		return data
+
+	def validate_attributes(self, data):
+		out = dict()
+		for k, v in data.items():
+			validators = self.attr_validators[k]
+			filtered = v
+			for validator in validators:
+				filtered = validator(filtered)
+			out[k] = filtered
+		return out
+
+	def validate_data(self, data):
+		out = dict()
+		for k, v in data.items():
+			validator = self.data_validators[k]
+			out[k] = [validator(d) for d in v] 
+		return out
+
+	def validate(self, data):
+		# Only include recognized attribute/values
+		data = filter_unrecognized_keys(self.uris.keys(), data)
+		# Ensure all attributes are present
+		data = add_missing_keys(self.uris.keys(), data)
+		data = self.assign_preset_values(data)
+		data = self.validate_attributes(data)
+		data = self.validate_data(data)
+		return data
+
 
 def _validate_list(values):
 	if not isinstance(values, list):
@@ -194,13 +217,9 @@ class Attribute(object):
 		self.validators = [_validate_list]
 		if presets:
 			self.presets = presets
-			self.validators.append(self._assign_presets)
 		if required:
 			self.required = True
 			self.validators.append(_validate_required)
 		if unique:
 			self.unique = True
 			self.validators.append(_validate_unique)
-
-		def _assign_presets(self, values):
-			return self.presets
