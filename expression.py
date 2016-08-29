@@ -162,39 +162,45 @@ class Resource(object):
 
 class Schema(object):
 	def __init__(self, attrs):
+		self.attributes = attrs
 		self.aliases = { attr.alias: attr.uri for attr in attrs }
 		self.uris = { attr.uri: attr.alias for attr in attrs }
-		self.validators = { attr.uri: attr.validators for attr in attrs }
+		self.attr_validators = { attr.uri: attr.validators for attr in attrs }
+		self.data_validators = { attr.uri: attr.predicate.validator for attr in attrs }
+		self.required_attrs = [ attr.uri for attr in attrs if attr.required ]
+		self.optional_attrs = [ attr.uri for attr in attrs if not attr.required ]
+
+def _validate_list(values):
+	if not isinstance(values, list):
+		raise TypeError('Data must be in list format')
+	return values
+
+def _validate_required(values):
+	if len(values) == 0:
+		raise ValueError("Value is required")
+	return values
+
+def _validate_unique(values):
+	if len(values) == 0:
+		raise ValueError("Only one value permitted")
+	return values
 
 class Attribute(object):
-	def __init__(self, alias, predicate, required=True,
-					unique=False, values=list()):
+	def __init__(self, alias, predicate, required=False,
+					unique=False, presets=None):
+		self.predicate = predicate
 		self.uri = predicate.uri
 		self.alias = alias
-		self.defaults = values
-		self.validators = { 'attributes': [self._validate_list],
-							'data': predicate.validator}
-		if values:
-			self.validators['attributes'].append(self._validate_defaults)
+		self.validators = [_validate_list]
+		if presets:
+			self.presets = presets
+			self.validators.append(self._assign_presets)
 		if required:
-			self.validators['attributes'].append(self._validate_required)
+			self.required = True
+			self.validators.append(_validate_required)
 		if unique:
-			self.validators['attributes'].append(self._validate_unique)
-			
-	def _validate_list(self, values):
-		if not isinstance(values, list):
-			raise TypeError('Data must be in list format')
-		return values
+			self.unique = True
+			self.validators.append(_validate_unique)
 
-	def _validate_required(self, values):
-		if len(values) == 0:
-			raise ValueError("Value is required")
-		return values
-
-	def _validate_unique(self, values):
-		if len(values) == 0:
-			raise ValueError("Only one value permitted")
-		return values
-
-	def _validate_defaults(self, values):
-		return self.defaults
+		def _assign_presets(self, values):
+			return self.presets
