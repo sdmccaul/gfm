@@ -11,14 +11,16 @@ class RDFLibData(object):
 		self.optional = self.schema.optional
 
 	def construct_triples(self, sublist):
-		req = [ t for t in self.triples if t[1] in sublist ]
-		req = [ update_triple(
+		triples = [ t for t in self.triples if t[1] in sublist ]
+		triples = [ update_triple(
 					t, 2, self.schema.XSD_encodings[t[1]])
-				if t[2] else t for t in req ]
-		req = [ bracket_uris(t, 0)
-				if t[0] else t for t in req ]
-		req = [ bracket_uris(t, 1) for t in req ]
-		return req
+				if t[2] else t for t in triples ]
+		triples = [ bracket_uris(t, 0)
+				if t[0] else t for t in triples ]
+		triples = [ bracket_uris(t, 1) for t in triples ]
+		triples = variablize_resource(triples)
+		triples = variablize_values(triples)
+		return triples
 
 def variableGenerator(r):
 	vals = range(r)
@@ -113,7 +115,7 @@ def build_construct_query(required, optional):
 
 class SPARQLInterface(object):
 	def __init__(self, endpoint):
-		graph = ConjunctiveGraph('SPARQLStore')
+		graph = rdflib.ConjunctiveGraph('SPARQLStore')
 		graph.open(endpoint)
 		self.graph = graph
 		self.insertTemplate = u"INSERTDATA{{GRAPH{0}{{{1}}}}}"

@@ -1,5 +1,5 @@
 from expression import Schema, Collection, Attribute
-from samples import rdfsLabel, rdfType, preferredTitle
+from samples import rdfsLabel, rdfType, preferredTitle, trainingAtOrganization
 
 fullName = Attribute(predicate=rdfsLabel, alias='fullName',
 						required=True, unique=True)
@@ -12,7 +12,9 @@ rdfClass = Attribute(predicate=rdfType, alias='class',
 						)
 title = Attribute(predicate=preferredTitle, alias='title',
 					required=False, unique=True)
-fisFacultySchema = Schema([fullName,rdfClass,title])
+training = Attribute(predicate=trainingAtOrganization, alias='training',
+					required=False)
+fisFacultySchema = Schema([fullName,rdfClass,title,training])
 fisFaculty = Collection(
 				name='fisFaculty',
 				schema=fisFacultySchema,
