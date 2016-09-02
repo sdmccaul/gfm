@@ -26,15 +26,19 @@ class Collection(object):
 	def namespace_uri(self, suffix):
 		return os.path.join(self.namespace, suffix)
 
-	def create(self, data=dict()):
+	def create(self, data=dict(), aliased=False):
 		uri = self.mint_new_uri()
+		if aliased:
+			data = self.schema.unalias_data(data)
 		res = Resource(collection=self, uri=uri, data=data)
 		# resp = res.save()
 		# if resp:
 		# 	return res
 		return res
 
-	def search(self, params=dict()):
+	def search(self, params=dict(), aliased=True):
+		if aliased:
+			params = self.schema.unalias_data(params)
 		res = Resource(collection=self, query=params)
 		# resp = self.endpoint.construct(
 		# 		self.schema.query, res.to_query())
@@ -86,7 +90,7 @@ class Resource(object):
 		else:
 			self.uri = None
 		if isinstance(data, dict):
-			self.update(data)
+			self.update(data, validate=True)
 		elif isinstance(query, dict):
 			self.data = self.schema.validate_query(query)
 
