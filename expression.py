@@ -26,7 +26,7 @@ class Collection(object):
 	def namespace_uri(self, suffix):
 		return os.path.join(self.namespace, suffix)
 
-	def create(self, data=None):
+	def create(self, data=dict()):
 		uri = self.mint_new_uri()
 		res = Resource(collection=self, uri=uri, data=data)
 		# resp = res.save()
@@ -34,39 +34,48 @@ class Collection(object):
 		# 	return res
 		return res
 
-	def search(self, **params):
-		res = Resource(collection=self, data=params)
-		resp = self.endpoint.construct(res.to_query())
+	def search(self, params=dict()):
+		res = Resource(collection=self, query=params)
+		# resp = self.endpoint.construct(
+		# 		self.schema.query, res.to_query())
 		# if resp == 200:
 		# 	for tripleset in resp:
+		return res
 
 	def resource_hash(self, prefix):
 		return uuid.uuid4().hex
 
 	def find(self, rabid):
 		uri = self.namespace_uri(rabid)
-		res = Resource(uri=uri, collection=self)
-		resp = self.endpoint.construct(res.to_query())
-		if resp == 200:
-			assert(uri == resp.body['@uri'])
-			data = self._triples_to_dict(resp.body['triples'])
-			res.update(data)
-			return res
+		res = Resource(uri=uri, collection=self, query={})
+		# resp = self.endpoint.construct(
+		# 		self.schema.query, res.to_query())
+		# if resp == 200:
+		# 	assert(uri == resp.body['@uri'])
+		# 	data = self._triples_to_dict(resp.body['triples'])
+		# 	res.update(data)
+		# 	return res
+		return res
 
 	def add_and_remove(self, add, remove):
-		resp = self.endpoint.insert_and_delete(self.graph, add, remove)
+		resp = self.endpoint.insert_and_delete(
+				self.named_graph, add, remove)
 		return resp
 
 	def add(self, add):
-		resp = self.endpoint.insert(self.graph, add)
+		resp = self.endpoint.insert(
+				self.named_graph, add)
 		return resp
 
 	def remove(self, remove):
-		resp = self.endpoint.delete(self.graph, remove)
+		resp = self.endpoint.delete(
+				self.named_graph, remove)
 		return resp
 
 class Resource(object):
-	def __init__(self, collection, uri=None, data=None):
+	def __init__(self, collection, uri=None,
+					data=None, query=None):
+		self.stored = dict()
 		self.data = dict()
 		self.collection = collection
 		self.schema = collection.schema
@@ -76,8 +85,10 @@ class Resource(object):
 			self.uri = data.get('@uri',None)
 		else:
 			self.uri = None
-		if data:
+		if isinstance(data, dict):
 			self.update(data)
+		elif isinstance(query, dict):
+			self.data = self.schema.validate_query(query)
 
 	def to_triples(self):
 		return [(self.uri, k, val) for k,v in self.data.items()
@@ -90,17 +101,6 @@ class Resource(object):
 			out = self.data
 		out['@uri'] = self.uri
 		return out
-
-	def to_query(self):
-		# Needs val conversion to None
-		# where appropriate
-		required = [(self.uri, k, val) for k,v in self.data.items()
-						for val in v
-							if k in self.schema.required ]
-		optional = [(self.uri, k, val) for k,v in self.data.items()
-						for val in v
-							if k in self.schema.optional ]
-		return {'required': required, 'optional': optional}
 
 	def overwrite(self, data):
 		revert = self.data.copy()
@@ -132,7 +132,6 @@ class Resource(object):
 	def remove(self):
 		resp = self.collection.remove(self.to_triples())
 
-
 def rename_dictionary_keys(newKeyMap, dct):
 	return { newKeyMap[k]: v for k,v in dct.items() }
 
@@ -144,6 +143,17 @@ def add_missing_keys(keyList, dct):
 	out.update({ k: list() for k in keyList if k not in dct })
 	return out
 
+def set_default_list_value(lst, val):
+	if not lst:
+		return [val]
+	else:
+		return lst 
+
+def noneify_empty_dictionary_lists(dct):
+	noned = { k:set_default_list_value(v, None)
+				for k,v in dct.items() }
+	return noned
+
 class Schema(object):
 	def __init__(self, attrs):
 		self.attributes = attrs
@@ -152,8 +162,9 @@ class Schema(object):
 		self.attr_validators = { attr.uri: attr.validators for attr in attrs }
 		self.data_validators = { attr.uri: attr.predicate.validator for attr in attrs }
 		self.presets = { attr.uri: attr.presets for attr in attrs if hasattr(attr,'presets') }
-		self.required = [ attr.uri for attr in attrs if attr.required ]
-		self.optional = [ attr.uri for attr in attrs if not attr.required ]
+		self.required = [ attr.uri for attr in attrs if hasattr(attr,'required') ]
+		self.optional = [ attr.uri for attr in attrs if not hasattr(attr,'required') ]
+		self.datatypes = { attr.uri: attr.predicate.datatype for attr in attrs }
 
 	def unalias_data(self, data):
 		return rename_dictionary_keys(self.aliases, data)
@@ -192,6 +203,13 @@ class Schema(object):
 		data = self.validate_data(data)
 		return data
 
+	def validate_query(self, params):
+		params = filter_unrecognized_keys(self.uris.keys(), params)
+		params = add_missing_keys(self.uris.keys(), params)
+		params = self.assign_preset_values(params)
+		params = self.validate_data(params)
+		params = noneify_empty_dictionary_lists(params)
+		return params
 
 def _validate_list(values):
 	if not isinstance(values, list):
@@ -204,7 +222,7 @@ def _validate_required(values):
 	return values
 
 def _validate_unique(values):
-	if len(values) == 0:
+	if len(values) > 1:
 		raise ValueError("Only one value permitted")
 	return values
 

@@ -22,6 +22,24 @@ def _validate_string(value):
 		raise UnicodeError("Bad unicode: ", value)
 	return value
 
+# def _XSD_encode_uri(value):
+# 	try:
+# 		return "<" + value + ">"
+# 	except:
+# 		raise ValueError("XSD encoding of URI failed")
+
+# def _XSD_encode_string(value):
+# 	try:
+# 		escaped_quotes = value.replace('"', '\"')
+
+# 	except:
+# 	return
+
+# def _XSD_encode_dateTime(value):
+# 	try:
+# 	except:
+# 	return
+
 class Predicate(object):
 
 	def __init__(self, uri, datatype):

@@ -1,5 +1,5 @@
 from expression import Schema, Collection, Attribute
-from samples import rdfsLabel, rdfType
+from samples import rdfsLabel, rdfType, preferredTitle
 
 fullName = Attribute(predicate=rdfsLabel, alias='fullName',
 						required=True, unique=True)
@@ -10,7 +10,9 @@ rdfClass = Attribute(predicate=rdfType, alias='class',
 							'http://vivo.brown.edu/ontology/vivo-brown/BrownThing'
 							]
 						)
-fisFacultySchema = Schema([fullName,rdfClass])
+title = Attribute(predicate=preferredTitle, alias='title',
+					required=False, unique=True)
+fisFacultySchema = Schema([fullName,rdfClass,title])
 fisFaculty = Collection(
 				name='fisFaculty',
 				schema=fisFacultySchema,
