@@ -121,6 +121,9 @@ class SPARQLInterface(object):
 		self.insertTemplate = u"INSERTDATA{{GRAPH{0}{{{1}}}}}"
 		self.deleteTemplate = u"DELETEDATA{{GRAPH{0}{{{1}}}}}"
 
+	def close(self):
+		self.graph.close()
+
 	def construct(self, resource, optional=True):
 		qres = RDFLibData(resource)
 		required = qres.construct_triples(qres.required)
@@ -129,11 +132,10 @@ class SPARQLInterface(object):
 		else:
 			optional = None
 		qbody = build_construct_query(required, optional)
-		return qbody
-		# results = self.graph.query(qbody)
+		results = self.graph.query(qbody)
 		# triples = convert_rdflib_to_triples(results)
 		# dictified = convert_triples_to_dicts(triples)
-		# return dictified
+		return results
 
 	def identifyAll(self, query):
 		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
