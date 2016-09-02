@@ -7,10 +7,11 @@ class RDFLibData(object):
 	def __init__(self, resource):
 		self.triples = resource.to_triples()
 		self.schema = resource.schema
+		self.required = self.schema.required
+		self.optional = self.schema.optional
 
-	def construct_required(self):
-		req = [ t for t in self.triples
-				if t[1] in self.schema.required ]
+	def construct_triples(self, sublist):
+		req = [ t for t in self.triples if t[1] in sublist ]
 		req = [ update_triple(
 					t, 2, self.schema.XSD_encodings[t[1]])
 				if t[2] else t for t in req ]
@@ -18,12 +19,6 @@ class RDFLibData(object):
 				if t[0] else t for t in req ]
 		req = [ bracket_uris(t, 1) for t in req ]
 		return req
-
-def encode_obj(triple, encoder):
-	if val:
-		return encoder(val)
-	else:
-		return val
 
 def variableGenerator(r):
 	vals = range(r)
@@ -79,7 +74,6 @@ def bracket_uris(triple, pos):
 	tlist.insert(pos,mapped)
 	return tuple(tlist)
 
-
 def querify(res):
 	triples = res.to_query()
 	uri_props = [ uri for uri in res.schema.query if res.schema.query[uri]['datatype'] == 'uri' ]
@@ -125,17 +119,19 @@ class SPARQLInterface(object):
 		self.insertTemplate = u"INSERTDATA{{GRAPH{0}{{{1}}}}}"
 		self.deleteTemplate = u"DELETEDATA{{GRAPH{0}{{{1}}}}}"
 
-	def construct(self, qres, optional=True):
-		required = qres.required
+	def construct(self, resource, optional=True):
+		qres = RDFLibData(resource)
+		required = qres.construct_triples(qres.required)
 		if optional:
-			optional = qres.optional
+			optional = qres.construct_triples(qres.optional)
 		else:
 			optional = None
 		qbody = build_construct_query(required, optional)
-		results = self.graph.query(qbody)
-		triples = convert_rdflib_to_triples(results)
-		dictified = convert_triples_to_dicts(triples)
-		return dictified
+		return qbody
+		# results = self.graph.query(qbody)
+		# triples = convert_rdflib_to_triples(results)
+		# dictified = convert_triples_to_dicts(triples)
+		# return dictified
 
 	def identifyAll(self, query):
 		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
