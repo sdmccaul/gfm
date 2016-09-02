@@ -3,6 +3,27 @@ import rdflib
 import contextlib
 from collections import defaultdict
 
+class RDFLibData(object):
+	def __init__(self, resource):
+		self.triples = resource.to_triples()
+		self.schema = resource.schema
+
+	def construct_required(self):
+		req = [ t for t in self.triples
+				if t[1] in self.schema.required ]
+		req = [ update_triple(
+					t, 2, self.schema.XSD_encodings[t[1]])
+				if t[2] else t for t in req ]
+		req = [ bracket_uris(t, 0)
+				if t[0] else t for t in req ]
+		req = [ bracket_uris(t, 1) for t in req ]
+		return req
+
+def encode_obj(triple, encoder):
+	if val:
+		return encoder(val)
+	else:
+		return val
 
 def variableGenerator(r):
 	vals = range(r)
@@ -35,7 +56,6 @@ def variablize_resource(triples):
 		var  = "?sbj"
 		out.append(make_subject_variable(triple, var))
 	return out
-
 
 
 def bracket_subjects(triples):
