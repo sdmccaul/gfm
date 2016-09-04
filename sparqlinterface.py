@@ -9,6 +9,14 @@ class RDFLibData(object):
 		self.schema = resource.schema
 		self.required = self.schema.required
 		self.optional = self.schema.optional
+		self.conversions = {
+			'uri': take_no_action,
+			'string': take_no_action,
+			'dateTime': convert_datetime_to_string,
+			'date': convert_datetime_to_string
+		}
+		self.mapper = { uri: self.conversions[self.schema.datatypes[uri]] 
+						for uri in self.schema.datatypes }
 
 	def construct_triples(self, sublist):
 		triples = [ t for t in self.triples if t[1] in sublist ]
@@ -54,7 +62,6 @@ def variablize_resource(triples):
 		out.append(make_subject_variable(triple, var))
 	return out
 
-
 def bracket_subjects(triples):
 	return [ bracket_uris(t, 0) if t[0] else t for t in triples]
 
@@ -75,17 +82,6 @@ def bracket_uris(triple, pos):
 	mapped = "<" + tlist.pop(pos) + ">"
 	tlist.insert(pos,mapped)
 	return tuple(tlist)
-
-def querify(res):
-	triples = res.to_query()
-	uri_props = [ uri for uri in res.schema.query if res.schema.query[uri]['datatype'] == 'uri' ]
-	print uri_props
-	out = bracket_subjects(triples)
-	out = bracket_objects(out, uri_props)
-	out = bracket_predicates(out)
-	out = variablize_resource(out)
-	out = variablize_values(out)
-	return out
 
 def write_statement(triple):
 	return "{0}{1}{2}.".format(*triple)
@@ -113,6 +109,59 @@ def build_construct_query(required, optional):
 	qbody = constructTemplate.format(construct, where)
 	return qbody
 
+def convert_rdflib_to_triples(response, conversion_map):
+	triples = [ ( t[0].toPython(), t[1].toPython(), t[2].toPython() )
+				for t in response ]
+	# for t in triples:
+	# 	print t, type(t)
+	# 	for a in t:
+	# 		print "\t",a, type(a)
+	converted = [ update_triple(triple, 2, conversion_map[triple[1]])
+					for triple in triples ]
+	return converted
+
+def take_no_action(val):
+	return val
+
+def convert_datetime_to_string(val):
+	return val.isoformat()
+
+# class RDFLibSchema(object):
+# 	def __init__(self):
+
+
+def _XSD_encode_uri(value):
+	try:
+		return "<"+ value +">"
+	except:
+		raise ValueError("XSD encoding of URI failed")
+
+def _XSD_encode_string(value):
+	try:
+		# escaped_quotes = value.replace('"', '\"')
+		return '"'+ value +'"'
+	except:
+		raise ValueError("XSD encoding of string failed")
+
+def _XSD_encode_dateTime(value):
+	try:
+		return '"'+ value +'"^^<http://www.w3.org/2001/XMLSchema#dateTime>'
+	except:
+		raise ValueError("XSD encoding of dateTime failed")
+
+def convert_triples_to_dicts(triples):
+	dict_of_dicts = defaultdict(lambda : defaultdict(list))
+	for triple in triples:
+		dict_of_dicts[triple[0]][triple[1]].append(triple[2])
+	out = []
+	for uri, data in dict_of_dicts.items():
+		res = {}
+		res.update(data)
+		res['@uri'] = uri
+		out.append(res)
+	return out
+
+
 class SPARQLInterface(object):
 	def __init__(self, endpoint):
 		graph = rdflib.ConjunctiveGraph('SPARQLStore')
@@ -120,6 +169,13 @@ class SPARQLInterface(object):
 		self.graph = graph
 		self.insertTemplate = u"INSERTDATA{{GRAPH{0}{{{1}}}}}"
 		self.deleteTemplate = u"DELETEDATA{{GRAPH{0}{{{1}}}}}"
+		self.XSD_formats = {
+			'uri': _XSD_encode_uri,
+			'anyURI': _XSD_encode_uri,
+			'string': _XSD_encode_string,
+			'dateTime': _XSD_encode_dateTime,
+			'datetime': _XSD_encode_dateTime
+		}
 
 	def close(self):
 		self.graph.close()
@@ -133,52 +189,6 @@ class SPARQLInterface(object):
 			optional = None
 		qbody = build_construct_query(required, optional)
 		results = self.graph.query(qbody)
-		# triples = convert_rdflib_to_triples(results)
-		# dictified = convert_triples_to_dicts(triples)
-		return results
-
-	def identifyAll(self, query):
-		rqrd_cnst = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
-		rqrd_where = "?sbj<http://www.w3.org/2000/01/rdf-schema#label>?label."
-		for q in query:
-			if isinstance(q,Required):
-				stmt = write_statement(q)
-				rqrd_where += stmt
-		construct_pattern = rqrd_cnst
-		where_pattern = rqrd_where
-		qbody = self.constructTemplate.format(construct_pattern,where_pattern)
-		resp = self.get(qbody)
-		return resp
-
-	def get(self, query):
-	    results = self.graph.query(query)
-	    resp = defaultdict(lambda : defaultdict(list))
-	    for row in results:
-	    	resp[row[0].toPython()][row[1].toPython()].append(row[2].toPython())
-	    return ou
-
-	def update(self, data, action):
-		postPattern = ""
-		for triple in data:
-			postPattern += write_statement(triple)
-		if action == "add":
-			pbody = self.insertTemplate.format(graph,postPattern)
-		elif action == "remove":
-			pbody = self.deleteTemplate.format(graph,postPattern)
-		else:
-			raise Exception("Unrecognized action")
-		resp = self.post(pbody)
-		return resp
-
-	def post(self,pbody):
-		endpoint ="http://localhost:8080/rab/api/sparqlUpdate"
-		payload = {
-					'email': "vivo_root@brown.edu",
-					'password': "goVivo"
-					}
-		payload['update'] = pbody
-		with contextlib.closing(requests.post(endpoint, data=payload)) as resp:
-			if resp.status_code == 200:
-				return resp
-			else:
-				raise Exception("Failed post! {0}".format(resp.text))
+		triples = convert_rdflib_to_triples(results, qres.mapper)
+		dictified = convert_triples_to_dicts(triples)
+		return dictified

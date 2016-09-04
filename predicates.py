@@ -46,7 +46,7 @@ class Predicate(object):
 	def __init__(self, uri, datatype):
 		self.uri = uri
 		self.datatype = datatype
-		if datatype == 'uri':
+		if datatype == 'uri' or datatype == 'anyURI':
 			self.validator = _validate_uri
 			self.XSD_encoding = _XSD_encode_uri
 		elif datatype == 'dateTime' or datatype == 'datetime':

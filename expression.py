@@ -37,6 +37,10 @@ class Collection(object):
 		return res
 
 	def search(self, params=dict(), aliased=True):
+		## IMPORTANT
+		## should not be able to search on an optional term
+		## or perhaps, not without required term present
+		## leads to SPARQL weirdness
 		if aliased:
 			params = self.schema.unalias_data(params)
 		res = Resource(collection=self, query=params)
