@@ -22,25 +22,6 @@ def _validate_string(value):
 		raise UnicodeError("Bad unicode: ", value)
 	return value
 
-def _XSD_encode_uri(value):
-	try:
-		return "<"+ value +">"
-	except:
-		raise ValueError("XSD encoding of URI failed")
-
-def _XSD_encode_string(value):
-	try:
-		# escaped_quotes = value.replace('"', '\"')
-		return '"'+ value +'"'
-	except:
-		raise ValueError("XSD encoding of string failed")
-
-def _XSD_encode_dateTime(value):
-	try:
-		return '"'+ value +'"^^<http://www.w3.org/2001/XMLSchema#dateTime>'
-	except:
-		raise ValueError("XSD encoding of dateTime failed")
-
 class Predicate(object):
 
 	def __init__(self, uri, datatype):
@@ -48,13 +29,10 @@ class Predicate(object):
 		self.datatype = datatype
 		if datatype == 'uri' or datatype == 'anyURI':
 			self.validator = _validate_uri
-			self.XSD_encoding = _XSD_encode_uri
 		elif datatype == 'dateTime' or datatype == 'datetime':
 			self.validator = _validate_datetime
-			self.XSD_encoding = _XSD_encode_dateTime
 		elif datatype == 'string':
 			self.validator = _validate_string
-			self.XSD_encoding = _XSD_encode_string
 
 	def validate(self, value):
 		return self.validator(value)

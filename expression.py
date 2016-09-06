@@ -172,7 +172,6 @@ class Schema(object):
 		self.required = [ attr.uri for attr in attrs if hasattr(attr,'required') ]
 		self.optional = [ attr.uri for attr in attrs if not hasattr(attr,'required') ]
 		self.datatypes = { attr.uri: attr.predicate.datatype for attr in attrs }
-		self.XSD_encodings = { attr.uri: attr.predicate.XSD_encoding for attr in attrs }
 
 	def unalias_data(self, data):
 		return rename_dictionary_keys(self.aliases, data)
