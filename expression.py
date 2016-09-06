@@ -15,7 +15,7 @@ class Collection(object):
 			out[triple[1]].append(triple[2])
 		return out
 
-	def register_endpoint(endpoint):
+	def register_endpoint(self, endpoint):
 		self.endpoint = endpoint
 
 	def mint_new_uri(self):
@@ -44,11 +44,10 @@ class Collection(object):
 		if aliased:
 			params = self.schema.unalias_data(params)
 		res = Resource(collection=self, query=params)
-		# resp = self.endpoint.construct(
-		# 		self.schema.query, res.to_query())
-		# if resp == 200:
-		# 	for tripleset in resp:
-		return res
+		resp = self.endpoint.construct(res)
+		out = [ Resource(collection=self, data=data)
+					for data in resp ]
+		return out
 
 	def resource_hash(self, prefix):
 		return uuid.uuid4().hex
