@@ -43,26 +43,23 @@ class Collection(object):
 		## leads to SPARQL weirdness
 		if aliased:
 			params = self.schema.unalias_data(params)
-		res = Resource(collection=self, query=params)
-		resp = self.endpoint.construct(res)
-		out = [ Resource(collection=self, data=data)
+		query = Resource(collection=self, query=params)
+		resp = self.endpoint.construct(query)
+		resList = [ Resource(collection=self, data=data)
 					for data in resp ]
-		return out
+		return resList
 
 	def resource_hash(self, prefix):
 		return uuid.uuid4().hex
 
 	def find(self, rabid):
 		uri = self.namespace_uri(rabid)
-		res = Resource(uri=uri, collection=self, query={})
-		# resp = self.endpoint.construct(
-		# 		self.schema.query, res.to_query())
-		# if resp == 200:
-		# 	assert(uri == resp.body['@uri'])
-		# 	data = self._triples_to_dict(resp.body['triples'])
-		# 	res.update(data)
-		# 	return res
-		return res
+		query = Resource(uri=uri, collection=self, query={})
+		resp = self.endpoint.construct(query)
+		resList = [ Resource(collection=self, data=data)
+					for data in resp ]
+		# Validate len(resList) == 1 ?
+		return resList
 
 	def add_and_remove(self, add, remove):
 		resp = self.endpoint.insert_and_delete(
