@@ -86,7 +86,7 @@ class SPARQLQuery(object):
 								for uri, datatype
 									in self.schema.datatypes.items() }
 
-	def write_query_triples(self, predicateFilter):
+	def write_construct_triples(self, predicateFilter):
 		triples = [ t for t in self.triples
 					if t[1] in predicateFilter ]
 		triples = [ update_triple(t, 2, self.XSD_mappings[t[1]])
@@ -151,6 +151,16 @@ def build_construct_query(required, optional):
 	qbody = constructTemplate.format(construct, where)
 	return qbody
 
+def build_identity_query(identity, required):
+	constructTemplate = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
+	construct = write_statement(identity[0])
+	where = ""
+	for triple in required:
+		stmt = write_statement(triple)
+		where += stmt
+	qbody = constructTemplate.format(construct, where)
+	return qbody
+
 def convert_triples_to_dicts(triples):
 	dict_of_dicts = defaultdict(lambda : defaultdict(list))
 	for triple in triples:
@@ -171,12 +181,24 @@ class SPARQLInterface(object):
 
 	def construct(self, resource, optional=True):
 		query = SPARQLQuery(resource)
-		required = query.write_query_triples(query.required)
+		required = query.write_construct_triples(query.required)
 		if optional:
-			optional = query.write_query_triples(query.optional)
+			optional = query.write_construct_triples(query.optional)
 		else:
 			optional = None
 		qbody = build_construct_query(required, optional)
+		results = self.endpoint.query(qbody)
+		triples = self.endpoint.convert_results_to_triples(
+					results, query.schema.datatypes)
+		dataList = convert_triples_to_dicts(triples)
+		return dataList
+
+	def identity(self, resource):
+		query = SPARQLQuery(resource)
+		required = query.write_construct_triples(query.required)
+		identity = [ t for t in required
+						if t[1] == "<http://www.w3.org/2000/01/rdf-schema#label>"]
+		qbody = build_identity_query(identity, required)
 		results = self.endpoint.query(qbody)
 		triples = self.endpoint.convert_results_to_triples(
 					results, query.schema.datatypes)

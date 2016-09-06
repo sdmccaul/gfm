@@ -9,11 +9,11 @@ class Collection(object):
 		self.namespace = namespace
 		self.prefix = prefix
 
-	def _triples_to_dict(triples):
-		out = defaultdict(list)
-		for triple in triples:
-			out[triple[1]].append(triple[2])
-		return out
+	# def _triples_to_dict(triples):
+	# 	out = defaultdict(list)
+	# 	for triple in triples:
+	# 		out[triple[1]].append(triple[2])
+	# 	return out
 
 	def register_endpoint(self, endpoint):
 		self.endpoint = endpoint
@@ -36,7 +36,7 @@ class Collection(object):
 		# 	return res
 		return res
 
-	def search(self, params=dict(), aliased=True):
+	def search(self, params=dict(), aliased=True, identity=False):
 		## IMPORTANT
 		## should not be able to search on an optional term
 		## or perhaps, not without required term present
@@ -44,7 +44,10 @@ class Collection(object):
 		if aliased:
 			params = self.schema.unalias_data(params)
 		query = Resource(collection=self, query=params)
-		resp = self.endpoint.construct(query)
+		if identity:
+			resp = self.endpoint.identity(query)
+		else:
+			resp = self.endpoint.construct(query)
 		resList = [ Resource(collection=self, data=data)
 					for data in resp ]
 		return resList
@@ -79,7 +82,7 @@ class Collection(object):
 class Resource(object):
 	def __init__(self, collection, uri=None,
 					data=None, query=None):
-		self.stored = dict()
+		# self.stored = dict()
 		self.data = dict()
 		self.collection = collection
 		self.schema = collection.schema
@@ -90,7 +93,7 @@ class Resource(object):
 		else:
 			self.uri = None
 		if isinstance(data, dict):
-			self.update(data, validate=True)
+			self.update(data, validate=False)
 		elif isinstance(query, dict):
 			self.data = self.schema.validate_query(query)
 
