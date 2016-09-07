@@ -9,12 +9,6 @@ class Collection(object):
 		self.namespace = namespace
 		self.prefix = prefix
 
-	# def _triples_to_dict(triples):
-	# 	out = defaultdict(list)
-	# 	for triple in triples:
-	# 		out[triple[1]].append(triple[2])
-	# 	return out
-
 	def register_endpoint(self, endpoint):
 		self.endpoint = endpoint
 
@@ -23,6 +17,9 @@ class Collection(object):
 		data_hash = self.resource_hash(self.prefix)
 		return self.namespace_uri(data_hash)
 
+	def resource_hash(self, prefix):
+		return uuid.uuid4().hex
+
 	def namespace_uri(self, suffix):
 		return os.path.join(self.namespace, suffix)
 
@@ -30,13 +27,11 @@ class Collection(object):
 		uri = self.mint_new_uri()
 		if aliased:
 			data = self.schema.unalias_data(data)
-		res = Resource(collection=self, uri=uri, data=data)
-		# resp = res.save()
-		# if resp:
-		# 	return res
-		return res
+		res = Resource(collection=self, uri=uri, incoming=data)
+		resp = self.endpoint.update(insert=res)
+		return resp
 
-	def search(self, params=dict(), aliased=True, identity=False):
+	def search(self, params=dict(), aliased=True):
 		## IMPORTANT
 		## should not be able to search on an optional term
 		## or perhaps, not without required term present
@@ -44,58 +39,61 @@ class Collection(object):
 		if aliased:
 			params = self.schema.unalias_data(params)
 		query = Resource(collection=self, query=params)
-		if identity:
-			resp = self.endpoint.identity(query)
-		else:
-			resp = self.endpoint.construct(query)
-		resList = [ Resource(collection=self, data=data)
+		resp = self.endpoint.construct(query)
+		resList = [ Resource(collection=self, stored=data)
 					for data in resp ]
 		return resList
-
-	def resource_hash(self, prefix):
-		return uuid.uuid4().hex
 
 	def find(self, rabid):
 		uri = self.namespace_uri(rabid)
 		query = Resource(uri=uri, collection=self, query={})
 		resp = self.endpoint.construct(query)
-		resList = [ Resource(collection=self, data=data)
+		resList = [ Resource(collection=self, stored=data)
 					for data in resp ]
 		# Validate len(resList) == 1 ?
-		return resList
+		return resList[0]
 
-	def add_and_remove(self, add, remove):
-		resp = self.endpoint.insert_and_delete(
-				self.named_graph, add, remove)
+	def overwrite(self, existing, data, aliased=True):
+		if aliased:
+			data = self.schema.unalias_data(data)
+		pending = Resource(
+					uri=existing.uri, collection=self, incoming=data)
+		resp = self.endpoint.update(insert=pending, delete=existing)
 		return resp
 
-	def add(self, add):
-		resp = self.endpoint.insert(
-				self.named_graph, add)
+	def modify(self, existing, data, aliased=True):
+		if aliased:
+			data = self.schema.unalias_data(data)
+		pending = Resource(collection=self,
+					stored=existing.to_dict(alias=False))
+		pending.update(data, validate_partial=True)
+		resp = self.endpoint.update(insert=pending, delete=existing)
 		return resp
 
-	def remove(self, remove):
-		resp = self.endpoint.delete(
-				self.named_graph, remove)
+	def remove(self, existing):
+		resp = self.endpoint.update(delete=existing)
 		return resp
 
 class Resource(object):
 	def __init__(self, collection, uri=None,
-					data=None, query=None):
-		# self.stored = dict()
+					incoming=None, stored=None,
+					query=None):
 		self.data = dict()
 		self.collection = collection
 		self.schema = collection.schema
+		if incoming:
+			self.uri = incoming.pop('@uri',None)
+		elif stored:
+			self.uri = stored.pop('@uri',None)
 		if uri:
+			# URI param takes precedence
 			self.uri = uri
-		elif data:
-			self.uri = data.get('@uri',None)
-		else:
-			self.uri = None
-		if isinstance(data, dict):
-			self.update(data, validate=False)
+		if isinstance(incoming, dict):
+			self.update(incoming, validate_full=True)
+		elif isinstance(stored, dict):
+			self.update(stored, validate_full=False)
 		elif isinstance(query, dict):
-			self.data = self.schema.validate_query(query)
+			self.update(query, validate_query=True)
 
 	def to_triples(self):
 		return [(self.uri, k, val) for k,v in self.data.items()
@@ -109,35 +107,16 @@ class Resource(object):
 		out['@uri'] = self.uri
 		return out
 
-	def overwrite(self, data):
-		revert = self.data.copy()
-		old = self.to_triples()
-		try:
-			self.update(data)
-		except:
-			self.update(revert)
-			raise ValueError("bad update: ", data)
-		new = self.to_triples()
-		resp = self.collection.add_and_remove(self, new, old)
-		if resp:
-			return True
-		else:
-			self.update(revert)
-			raise ValueError("Overwrite rejected")
-
-	def update(self, data, aliased=False, validate=False):
-		if aliased:
-			data = self.schema.unalias_data(data)
-		if validate:
-			data = self.schema.validate(data)
+	def update(self, data, validate_full=False,
+				validate_partial=False,
+				validate_query=False):
+		if validate_full or validate_query:
+			data = self.schema.validate_structure(data)
+		if validate_full or validate_partial:
+			data = self.schema.validate_resource(data)
+		elif validate_query:
+			data = self.schema.validate_query(data)
 		self.data.update(data)
-
-	def save(self):
-		resp = self.collection.add(self.to_triples())
-		return resp
-
-	def remove(self):
-		resp = self.collection.remove(self.to_triples())
 
 def rename_dictionary_keys(newKeyMap, dct):
 	return { newKeyMap[k]: v for k,v in dct.items() }
@@ -200,19 +179,20 @@ class Schema(object):
 			out[k] = [validator(d) for d in v] 
 		return out
 
-	def validate(self, data):
+	def validate_structure(self, data):
 		# Only include recognized attribute/values
 		data = filter_unrecognized_keys(self.uris.keys(), data)
 		# Ensure all attributes are present
 		data = add_missing_keys(self.uris.keys(), data)
+		return data
+
+	def validate_resource(self, data):
 		data = self.assign_preset_values(data)
 		data = self.validate_attributes(data)
 		data = self.validate_data(data)
 		return data
 
 	def validate_query(self, params):
-		params = filter_unrecognized_keys(self.uris.keys(), params)
-		params = add_missing_keys(self.uris.keys(), params)
 		params = self.assign_preset_values(params)
 		params = self.validate_data(params)
 		params = noneify_empty_dictionary_lists(params)

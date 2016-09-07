@@ -39,17 +39,17 @@ def retrieve(rabid):
 	return response(code=200, body=data)
 
 @app.route('/rabdata/fisfeed/faculty/<rabid>', methods=['PUT'])
-def update(rabid):
+def replace(rabid):
 	try:
 		fisfac = FisFaculty.find(rabid=rabid)
 	except:
 		return 404
 	if fisfac.ETag == req.headers["If-Match"]:
 		try:
-			fisfac.overwrite(json.loads(req.body))
+			updated = FisFaculty.overwrite(fisfac, json.loads(req.body))
 		except:
 			return 400
-		return response(code=201, body=fisfac)
+		return response(code=201, body=updated)
 	else:
 		return 409
 

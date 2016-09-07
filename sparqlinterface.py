@@ -99,6 +99,15 @@ class SPARQLQuery(object):
 		triples = variablize_values(triples)
 		return triples
 
+	def write_update_triples(self):
+		triples = [ update_triple(t, 2, self.XSD_mappings[t[1]])
+						if t[2] else t for t in self.triples ]
+		triples = [ update_triple(t, 0, _XSD_encode_uri)
+						if t[0] else t for t in triples ]
+		triples = [ update_triple(t, 1, _XSD_encode_uri)
+						for t in triples ]
+		return triples
+
 
 def take_no_action(val):
 	return val
@@ -151,16 +160,6 @@ def build_construct_query(required, optional):
 	qbody = constructTemplate.format(construct, where)
 	return qbody
 
-def build_identity_query(identity, required):
-	constructTemplate = u"CONSTRUCT{{{0}}}WHERE{{{1}}}"
-	construct = write_statement(identity[0])
-	where = ""
-	for triple in required:
-		stmt = write_statement(triple)
-		where += stmt
-	qbody = constructTemplate.format(construct, where)
-	return qbody
-
 def convert_triples_to_dicts(triples):
 	dict_of_dicts = defaultdict(lambda : defaultdict(list))
 	for triple in triples:
@@ -193,14 +192,10 @@ class SPARQLInterface(object):
 		dataList = convert_triples_to_dicts(triples)
 		return dataList
 
-	def identity(self, resource):
-		query = SPARQLQuery(resource)
-		required = query.write_construct_triples(query.required)
-		identity = [ t for t in required
-						if t[1] == "<http://www.w3.org/2000/01/rdf-schema#label>"]
-		qbody = build_identity_query(identity, required)
-		results = self.endpoint.query(qbody)
-		triples = self.endpoint.convert_results_to_triples(
-					results, query.schema.datatypes)
-		dataList = convert_triples_to_dicts(triples)
-		return dataList
+	def update(self, insert=None, delete=None):
+		if insert:
+			insert_query = SPARQLQuery(insert)
+			print insert_query.write_update_triples()
+		if delete:
+			delete_query = SPARQLQuery(delete)
+			print delete_query.write_update_triples()
