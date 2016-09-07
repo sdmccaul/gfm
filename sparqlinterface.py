@@ -164,13 +164,8 @@ def convert_triples_to_dicts(triples):
 	dict_of_dicts = defaultdict(lambda : defaultdict(list))
 	for triple in triples:
 		dict_of_dicts[triple[0]][triple[1]].append(triple[2])
-	out = []
-	for uri, data in dict_of_dicts.items():
-		res = {}
-		res.update(data)
-		res['@uri'] = uri
-		out.append(res)
-	return out
+	return [ { uri: data }
+				for uri, data in dict_of_dicts.items() ]
 
 class SPARQLInterface(object):
 	def __init__(self, endpoint_address, queryLib):

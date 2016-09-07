@@ -40,7 +40,8 @@ class Collection(object):
 			params = self.schema.unalias_data(params)
 		query = Resource(collection=self, query=params)
 		resp = self.endpoint.construct(query)
-		resList = [ Resource(collection=self, stored=data)
+		resList = [ Resource(uri=data.keys()[0],
+					collection=self, stored=data.values()[0])
 					for data in resp ]
 		return resList
 
@@ -48,12 +49,15 @@ class Collection(object):
 		uri = self.namespace_uri(rabid)
 		query = Resource(uri=uri, collection=self, query={})
 		resp = self.endpoint.construct(query)
-		resList = [ Resource(collection=self, stored=data)
+		resList = [ Resource(uri=data.keys()[0],
+					collection=self, stored=data.values()[0])
 					for data in resp ]
 		# Validate len(resList) == 1 ?
 		return resList[0]
 
 	def overwrite(self, existing, data, aliased=True):
+		uri, data = data.items()[0]
+		assert uri == existing.uri
 		if aliased:
 			data = self.schema.unalias_data(data)
 		pending = Resource(
@@ -62,10 +66,13 @@ class Collection(object):
 		return resp
 
 	def modify(self, existing, data, aliased=True):
+		uri, data = data.items()[0]
+		assert uri == existing.uri
 		if aliased:
 			data = self.schema.unalias_data(data)
-		pending = Resource(collection=self,
-					stored=existing.to_dict(alias=False))
+		uri, existing_data = existing.to_dict(alias=False).items()[0]
+		pending = Resource(uri=existing.uri,
+							collection=self, stored=existing_data)
 		pending.update(data, validate_partial=True)
 		resp = self.endpoint.update(insert=pending, delete=existing)
 		return resp
@@ -81,13 +88,7 @@ class Resource(object):
 		self.data = dict()
 		self.collection = collection
 		self.schema = collection.schema
-		if incoming:
-			self.uri = incoming.pop('@uri',None)
-		elif stored:
-			self.uri = stored.pop('@uri',None)
-		if uri:
-			# URI param takes precedence
-			self.uri = uri
+		self.uri = uri
 		if isinstance(incoming, dict):
 			self.update(incoming, validate_full=True)
 		elif isinstance(stored, dict):
@@ -101,10 +102,10 @@ class Resource(object):
 
 	def to_dict(self, alias=True):
 		if alias:
-			out = self.schema.alias_data(self.data)
+			data = self.schema.alias_data(self.data)
 		else:
-			out = self.data
-		out['@uri'] = self.uri
+			data = self.data
+		out = { self.uri: data }
 		return out
 
 	def update(self, data, validate_full=False,
