@@ -3,37 +3,6 @@ import rdflib
 import contextlib
 from collections import defaultdict
 
-def variableGenerator(r):
-	vals = range(r)
-	for v in vals:
-		yield "?"+str(v)
-
-def make_subject_variable(triple,var):
-	if triple[0] is None:
-		return (var, triple[1], triple[2])
-	else:
-		return triple
-
-def make_object_variable(triple,var):
-	if triple[2] is None:
-		return (triple[0], triple[1], var)
-	else:
-		return triple
-
-def variablize_resource(triples):
-	out = list()
-	for triple in triples:
-		var  = "?sbj"
-		out.append(make_subject_variable(triple, var))
-	return out
-
-def variablize_values(triples):
-	out = list()
-	varJar = variableGenerator(100)
-	for triple in triples:
-		var  = varJar.next()
-		out.append(make_object_variable(triple, var))
-	return out
 
 def write_statement(triple):
 	return "{0}{1}{2}.".format(*triple)
@@ -43,6 +12,17 @@ def optionalize_statement(triple):
 
 def write_optional(triple):
 	return optionalize_statement(write_statement(triple))
+
+def variableGenerator(r):
+	vals = range(r)
+	for v in vals:
+		yield "?"+str(v)
+
+def _variabalize_value(val, var):
+	if val is None:
+		return var
+	else:
+		return val
 
 def _XSD_encode_uri(value):
 	try:
@@ -63,9 +43,9 @@ def _XSD_encode_dateTime(value):
 	except:
 		raise ValueError("XSD encoding of dateTime failed")
 
-def update_triple(triple, pos, func):
+def update_triple(triple, pos, func, *params):
 	tlist = list(triple)
-	mapped = func(tlist.pop(pos))
+	mapped = func(tlist.pop(pos), *params)
 	tlist.insert(pos,mapped)
 	return tuple(tlist)
 
@@ -85,6 +65,7 @@ class SPARQLQuery(object):
 		self.XSD_mappings = { uri: self.XSD_formats[datatype]
 								for uri, datatype
 									in self.schema.datatypes.items() }
+		self.sparql_variables = variableGenerator(100)
 
 	def write_construct_triples(self, predicateFilter):
 		triples = [ t for t in self.triples
@@ -95,8 +76,11 @@ class SPARQLQuery(object):
 						if t[0] else t for t in triples ]
 		triples = [ update_triple(t, 1, _XSD_encode_uri)
 						for t in triples ]
-		triples = variablize_resource(triples)
-		triples = variablize_values(triples)
+		triples = [ update_triple(t, 0, _variabalize_value, "?sbj")
+						for t in triples ]
+		triples = [ update_triple(t, 2, _variabalize_value,
+						self.sparql_variables.next())
+							for t in triples ]
 		return triples
 
 	def write_update_triples(self):
