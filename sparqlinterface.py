@@ -1,7 +1,13 @@
-import requests
-import rdflib
-import contextlib
 from collections import defaultdict
+
+import rdflib
+
+import requests
+import re
+import StringIO
+import contextlib
+import xml.etree.ElementTree as ET
+import json
 
 
 def variableGenerator(r):
@@ -40,7 +46,7 @@ def update_triple(triple, pos, func, *params):
 	tlist.insert(pos,mapped)
 	return tuple(tlist)
 
-class SPARQLQuery(object):
+class SPARQLRequest(object):
 	def __init__(self, resource):
 		self.XSD_formats = {
 			'uri': _XSD_encode_uri,
@@ -92,11 +98,14 @@ def take_no_action(val):
 def convert_datetime_to_string(val):
 	return val.isoformat()
 
-class RDFLibEndpoint(object):
-	def __init__(self, endpoint):
-		graph = rdflib.ConjunctiveGraph('SPARQLStore')
-		graph.open(endpoint)
-		self.graph = graph
+class RdfLibSparqlApi(object):
+	def __init__(self, query_endpoint, update_endpoint):
+		qgraph = rdflib.ConjunctiveGraph('SPARQLquery')
+		qgraph.open(query_endpoint)
+		ugraph = rdflib.ConjunctiveGraph('SPARQLupdate')
+		ugraph.open(update_endpoint)
+		self.query_endpoint = qgraph
+		self.update_endpoint = ugraph
 		self.result_mappings = {
 			'uri': take_no_action,
 			'string': take_no_action,
@@ -105,10 +114,11 @@ class RDFLibEndpoint(object):
 		}
 
 	def query(self, queryText):
-		return self.graph.query(queryText)
+		return self.query_graph.query(queryText)
 
 	def close(self):
-		self.graph.close()
+		self.query_graph.close()
+		self.update_endpoint.close()
 
 	def convert_results_to_triples(self, rdflibResults, datatypeMap):
 		mappings = { uri: self.result_mappings[datatype]
@@ -119,6 +129,68 @@ class RDFLibEndpoint(object):
 						for triple in triples ]
 		return converted
 
+def parseRDFXMLString(stringData):
+	# Ugly braces due to namespaced data
+	# A better fix out there; ie, request options?
+	root = ET.fromstring(stringData) 
+	triples = [ (sbj.get(
+					'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}about'
+				),
+				prd.tag.replace('{','').replace('}',''),
+				prd.get(
+					'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource'
+				)
+				if
+					'{http://www.w3.org/1999/02/22-rdf-syntax-ns#}resource'
+						in prd.attrib
+				else prd.text)
+					for sbj in root
+						for prd in sbj ]
+	return triples
+
+# def parseNTriplesString(stringData):
+# 	triples = []
+# 	for line in f:
+# 		s, p, o = re.findall(
+# 			"<[^>\"]*>\W|\".*\"\^\^<.*>\W\.\n|\".*\"\W\.\n", line)
+		
+# 		triples.append(
+# 			(s.rstrip(), p.rstrip(), o.rstrip(' .\n'))
+# 			)
+# 	return triples
+
+def parseJSONString(stringData):
+	jdata = json.loads(stringData)
+	triples = [ (s, p, o['value'])
+				for s, v in jdata.items()
+					for p, z in v.items()
+						for o in z ]
+	return triples
+
+class HttpSparqlApi(object):
+	def __init__(self, query_endpoint, update_endpoint):
+		self.query_endpoint = query_endpoint
+		self.update_endpoint = update_endpoint
+
+	def query(self, qbody):
+		# Output options:
+		# 'nt', 'xml', 'json'
+		payload = {'output': 'json'}
+		payload['query'] = qbody
+		with contextlib.closing(
+				requests.get(
+					self.query_endpoint, params=payload)) as resp:
+			if resp.status_code == 200:
+				return resp
+			else:
+				raise Exception("Failed get! {0}".format(resp.text))
+
+	def update(self, ibody, dbody):
+		pass
+
+	def convert_results_to_triples(self, requestsResp, datatypeMap):
+		triples = parseJSONString(requestsResp.text)
+		return triples
 
 def write_statement(triple):
 	return "{0}{1}{2}.".format(*triple)
@@ -184,13 +256,16 @@ def set_difference(list1, list2):
 	return (out1, out2)
 
 class SPARQLInterface(object):
-	def __init__(self, endpoint_address, queryLib):
-		if queryLib == 'rdflib':
-			self.endpoint = RDFLibEndpoint(endpoint_address)
-		self.endpoint_address = endpoint_address
+	def __init__(self, query_endpoint, update_endpoint, sparql_api):
+		if sparql_api == 'rdflib':
+			self.endpoint = RdfLibSparqlApi(
+								query_endpoint, update_endpoint)
+		elif sparql_api == 'http' or sparql_api == 'HTTP':
+			self.endpoint = HttpSparqlApi(
+								query_endpoint, update_endpoint)
 
 	def construct(self, resource, optional=True):
-		query = SPARQLQuery(resource)
+		query = SPARQLRequest(resource)
 		required = query.write_construct_triples(query.required)
 		if optional:
 			optional = query.write_construct_triples(query.optional)
@@ -204,15 +279,16 @@ class SPARQLInterface(object):
 		return dataList
 
 	def update(self, insert=None, delete=None):
+		# https://wiki.duraspace.org/display/VIVOARC/The+SPARQL+Update+API#TheSPARQLUpdateAPI-EnablingtheAPI
 		if insert:
-			insert_query = SPARQLQuery(insert)
+			insert_query = SPARQLRequest(insert)
 			insert_data = insert_query.write_update_triples()
 			insert_graph = insert_query.named_graph
 		else:
 			insert_data = None
 			insert_graph = None
 		if delete:
-			delete_query = SPARQLQuery(delete)
+			delete_query = SPARQLRequest(delete)
 			delete_data = delete_query.write_update_triples()
 			delete_graph = delete_query.named_graph
 		else:

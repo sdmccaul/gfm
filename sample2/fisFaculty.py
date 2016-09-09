@@ -19,6 +19,6 @@ fisFacultySchema = Schema([fullName,rdfClass,title,training,last])
 fisFaculty = Collection(
 				name='fisFaculty',
 				schema=fisFacultySchema,
-				named_graph='http://fakenamedgraph',
+				named_graph='http://vitro.mannlib.cornell.edu/default/vitro-kb-2',
 				namespace='http://vivo.brown.edu/individual/',
 				prefix='faculty')

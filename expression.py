@@ -36,6 +36,8 @@ class Collection(object):
 		## should not be able to search on an optional term
 		## or perhaps, not without required term present
 		## leads to SPARQL weirdness
+		## ALSO
+		## lack of attribute validation can introduce issues
 		if aliased:
 			params = self.schema.unalias_data(params)
 		query = Resource(collection=self, query=params)
@@ -194,6 +196,7 @@ class Schema(object):
 		return data
 
 	def validate_query(self, params):
+		# Need to validate "list" type?
 		params = self.assign_preset_values(params)
 		params = self.validate_data(params)
 		params = noneify_empty_dictionary_lists(params)
@@ -215,6 +218,7 @@ def _validate_unique(values):
 	return values
 
 class Attribute(object):
+	# Add support for "write","edit"; etc
 	def __init__(self, alias, predicate, required=False,
 					unique=False, presets=None):
 		self.predicate = predicate
