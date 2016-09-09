@@ -1,5 +1,44 @@
 import os
 import uuid
+import datetime
+import urlparse
+
+def _validate_uri(value):
+	try:
+		urlparse.urlparse(value)
+	except:
+		raise ValueError("Bad URI: ", value)
+	return value
+
+def _validate_datetime(value):
+	try:
+		datetime.datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
+	except:	
+		raise ValueError("Bad date: ", value)
+	return value
+
+def _validate_string(value):
+	try:
+		value.decode('UTF-8')
+	except:
+		raise UnicodeError("Bad unicode: ", value)
+	return value
+
+class Predicate(object):
+
+	def __init__(self, uri, datatype):
+		self.uri = uri
+		self.datatype = datatype
+		if datatype == 'uri' or datatype == 'anyURI':
+			self.validator = _validate_uri
+		elif datatype == 'dateTime' or datatype == 'datetime':
+			self.validator = _validate_datetime
+		elif datatype == 'string':
+			self.validator = _validate_string
+
+	def validate(self, value):
+		return self.validator(value)
+
 
 class Collection(object):
 	def __init__(self, name, schema, named_graph, namespace, prefix):
@@ -143,8 +182,32 @@ def noneify_empty_dictionary_lists(dct):
 				for k,v in dct.items() }
 	return noned
 
+def attribute_builder(inputDict):
+	attList = []
+	for alias, attrs in inputDict.items():
+		for feature, vals in attrs.items():
+			presets = None
+			if feature == 'presets':
+				presets = vals
+			elif isinstance(feature, Predicate):
+				pred = feature
+				qual = vals
+			else:
+				raise ValueError("Bad!", feature)
+			att = Attribute(
+					alias=alias,
+					predicate=pred,
+					required='required' in qual,
+					optional='optional' in qual,
+					unique='unique' in qual,
+					presets=presets)
+			attList.append(att)
+	return attList
+
 class Schema(object):
 	def __init__(self, attrs):
+		if isinstance(attrs, dict):
+			attrs = attribute_builder(attrs)
 		self.attributes = attrs
 		self.aliases = { attr.alias: attr.uri for attr in attrs }
 		self.uris = { attr.uri: attr.alias for attr in attrs }
@@ -219,7 +282,8 @@ def _validate_unique(values):
 
 class Attribute(object):
 	# Add support for "write","edit"; etc
-	def __init__(self, alias, predicate, required=False,
+	def __init__(self, alias, predicate,
+					required=False, optional=False,
 					unique=False, presets=None):
 		self.predicate = predicate
 		self.uri = predicate.uri
