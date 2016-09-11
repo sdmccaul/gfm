@@ -8,6 +8,7 @@ import StringIO
 import contextlib
 import xml.etree.ElementTree as ET
 import json
+import urllib
 
 
 def variableGenerator(r):
@@ -175,18 +176,26 @@ class HttpSparqlApi(object):
 	def query(self, qbody):
 		# Output options:
 		# 'nt', 'xml', 'json'
-		payload = {'output': 'json'}
-		payload['query'] = qbody
-		with contextlib.closing(
-				requests.get(
-					self.query_endpoint, params=payload)) as resp:
-			if resp.status_code == 200:
-				return resp
-			else:
-				raise Exception("Failed get! {0}".format(resp.text))
+		payload = {
+			'output': 'json',
+			'query': qbody
+		}
+		resp = requests.get(self.query_endpoint, params=payload)
+		if resp.status_code == 200:
+			return resp
+		else:
+			raise Exception("Failed get! {0}".format(resp.text))
 
-	def update(self, ibody, dbody):
-		pass
+	def update(self, pbody):
+		payload = {
+			'email': "vivo_root@brown.edu",
+			'password': "goVivo",
+			'update': pbody
+		}
+		data = urllib.urlencode(payload)
+		with contextlib.closing(
+			urllib.urlopen(self.update_endpoint, data)) as resp:
+			return resp.code
 
 	def convert_results_to_triples(self, requestsResp, datatypeMap):
 		triples = parseJSONString(requestsResp.text)
@@ -229,15 +238,15 @@ def build_insert_delete_query(insert=None,insert_graph=None,
 			delete_triples += write_statement(triple)
 		delete_body = delete_template.format(
 										delete_graph, delete_triples)
-		print delete_body
 		pbody += delete_body
+		if insert and insert_graph:
+			pbody += ";"
 	if insert and insert_graph:
 		insert_triples = ""
 		for triple in insert:
 			insert_triples += write_statement(triple)
 		insert_body = insert_template.format(
 										insert_graph, insert_triples)
-		print insert_body
 		pbody += insert_body
 	return pbody
 
@@ -300,4 +309,5 @@ class SPARQLInterface(object):
 		pbody = build_insert_delete_query(
 					insert_data, insert_graph,
 					delete_data, delete_graph)
-		return None
+		resp = self.endpoint.update(pbody)
+		return resp

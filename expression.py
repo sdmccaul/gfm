@@ -194,14 +194,14 @@ def attribute_builder(inputDict):
 				qual = vals
 			else:
 				raise ValueError("Bad!", feature)
-			att = Attribute(
-					alias=alias,
-					predicate=pred,
-					required='required' in qual,
-					optional='optional' in qual,
-					unique='unique' in qual,
-					presets=presets)
-			attList.append(att)
+		att = Attribute(
+				alias=alias,
+				predicate=pred,
+				required='required' in qual,
+				optional='optional' in qual,
+				unique='unique' in qual,
+				presets=presets)
+		attList.append(att)
 	return attList
 
 class Schema(object):
