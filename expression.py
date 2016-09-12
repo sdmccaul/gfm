@@ -182,27 +182,10 @@ def noneify_empty_dictionary_lists(dct):
 				for k,v in dct.items() }
 	return noned
 
-def attribute_builder(inputDict):
-	attList = []
-	for alias, attrs in inputDict.items():
-		for feature, vals in attrs.items():
-			presets = None
-			if feature == 'presets':
-				presets = vals
-			elif isinstance(feature, Predicate):
-				pred = feature
-				qual = vals
-			else:
-				raise ValueError("Bad!", feature)
-		att = Attribute(
-				alias=alias,
-				predicate=pred,
-				required='required' in qual,
-				optional='optional' in qual,
-				unique='unique' in qual,
-				presets=presets)
-		attList.append(att)
-	return attList
+def attribute_builder(aliasDict):
+	for alias in aliasDict:
+		aliasDict[alias].set_alias(alias)
+	return [ attr for attr in aliasDict.values() ]
 
 class Schema(object):
 	def __init__(self, attrs):
@@ -282,7 +265,7 @@ def _validate_unique(values):
 
 class Attribute(object):
 	# Add support for "write","edit"; etc
-	def __init__(self, alias, predicate,
+	def __init__(self, predicate, alias=None,
 					required=False, optional=False,
 					unique=False, presets=None):
 		self.predicate = predicate
@@ -297,3 +280,6 @@ class Attribute(object):
 		if unique:
 			self.unique = True
 			self.validators.append(_validate_unique)
+
+	def set_alias(self, alias):
+		self.alias = alias

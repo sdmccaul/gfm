@@ -180,7 +180,11 @@ class HttpSparqlApi(object):
 			'output': 'json',
 			'query': qbody
 		}
-		resp = requests.get(self.query_endpoint, params=payload)
+		header = {
+			'Connection': 'close'
+		}
+		resp = requests.get(self.query_endpoint,
+								params=payload, headers=header)
 		if resp.status_code == 200:
 			return resp
 		else:
@@ -192,10 +196,13 @@ class HttpSparqlApi(object):
 			'password': "goVivo",
 			'update': pbody
 		}
-		data = urllib.urlencode(payload)
-		with contextlib.closing(
-			urllib.urlopen(self.update_endpoint, data)) as resp:
-			return resp.code
+		header = {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'Connection': 'close'
+		}
+		resp = requests.post(self.update_endpoint,
+								data=payload,headers=header)
+		return resp
 
 	def convert_results_to_triples(self, requestsResp, datatypeMap):
 		triples = parseJSONString(requestsResp.text)
