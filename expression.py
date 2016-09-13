@@ -217,7 +217,10 @@ class Schema(object):
 			validators = self.attr_validators[k]
 			filtered = v
 			for validator in validators:
-				filtered = validator(filtered)
+				try:
+					filtered = validator(filtered)
+				except ValueError as e:
+					raise Exception(e,k,v)
 			out[k] = filtered
 		return out
 
@@ -225,7 +228,10 @@ class Schema(object):
 		out = dict()
 		for k, v in data.items():
 			validator = self.data_validators[k]
-			out[k] = [validator(d) for d in v] 
+			try:
+				out[k] = [validator(d) for d in v]
+			except ValueError as e:
+				raise Exception(e,k,d)
 		return out
 
 	def validate_structure(self, data):
